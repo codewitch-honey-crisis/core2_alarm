@@ -1,3 +1,4 @@
+//#define NO_WIFI
 #include <Arduino.h>
 #include <esp_i2c.hpp> // i2c initialization
 #ifdef M5STACK_CORE2
@@ -9,7 +10,14 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 #include <esp_lcd_panel_ili9342.h>
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include <esp_vfs_fat.h>
+#include <sdmmc_cmd.h>
 #include <esp_i2c.hpp>
+#ifndef NO_WIFI
+#include <WiFi.h>
+#endif
 #ifdef M5STACK_CORE2
 #include <ft6336.hpp>
 #endif
@@ -43,6 +51,7 @@ using touch_t = ft6336<320,280>;
 static touch_t touch(esp_i2c<1,21,22>::instance);
 #endif
 
+
 using screen_t = uix::screen<rgb_pixel<16>>;
 
 static uix::display lcd;
@@ -51,8 +60,9 @@ static uix::display lcd;
 static esp_lcd_panel_handle_t lcd_handle;
 static constexpr const size_t panel_transfer_buffer_size = 320*240*2/10;
 // the transfer buffers
-uint8_t* panel_transfer_buffer1 = nullptr;
-uint8_t* panel_transfer_buffer2 = nullptr;
+static uint8_t* panel_transfer_buffer1 = nullptr;
+static uint8_t* panel_transfer_buffer2 = nullptr;
+static sdmmc_card_t *card = nullptr;
 
 // tell UIX the DMA transfer is complete
 static bool panel_flush_ready(esp_lcd_panel_io_handle_t panel_io, 
@@ -85,27 +95,71 @@ static void panel_on_touch(point16* out_locations,
         }
     }
 }
+static void spi_init() {
+    spi_bus_config_t buscfg;
+    memset(&buscfg, 0, sizeof(buscfg));
+    buscfg.sclk_io_num = 18;
+    buscfg.mosi_io_num = 23;
+    buscfg.miso_io_num = 38;
+    buscfg.quadwp_io_num = -1;
+    buscfg.quadhd_io_num = -1;
+    buscfg.max_transfer_sz = gfx::math::max(panel_transfer_buffer_size,(size_t)(16*1024)) + 8;
+    // Initialize the SPI bus on VSPI (SPI3)
+    spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
+}
+static bool sd_init() {
+    // Options for mounting the filesystem.
+    // If format_if_mount_failed is set to true, SD card will be partitioned and
+    // formatted in case when mounting fails.
+    esp_vfs_fat_sdmmc_mount_config_t mount_config;
+    memset(&mount_config,0,sizeof(mount_config));
+    mount_config.format_if_mount_failed = false;
+    mount_config.max_files = 5;
+    mount_config.allocation_unit_size = 0;
+    
+    static const char mount_point[] = "/sdcard";
+    sdmmc_host_t host;
+    memset(&host,0,sizeof(host));
 
+    host.flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG;
+    host.slot = SPI3_HOST;
+    host.max_freq_khz = SDMMC_FREQ_DEFAULT;
+    host.io_voltage = 3.3f;
+    host.init = &sdspi_host_init;
+    host.set_bus_width = NULL;
+    host.get_bus_width = NULL;
+    host.set_bus_ddr_mode = NULL;
+    host.set_card_clk = &sdspi_host_set_card_clk;
+    host.set_cclk_always_on = NULL;
+    host.do_transaction = &sdspi_host_do_transaction;
+    host.deinit_p = &sdspi_host_remove_device;
+    host.io_int_enable = &sdspi_host_io_int_enable;
+    host.io_int_wait = &sdspi_host_io_int_wait;
+    host.command_timeout_ms = 0;
+    // This initializes the slot without card detect (CD) and write protect (WP) signals.
+    sdspi_device_config_t slot_config;
+    memset(&slot_config,0,sizeof(slot_config));
+    slot_config.host_id   = (spi_host_device_t)host.slot;
+    slot_config.gpio_cs   = (gpio_num_t)4;
+    slot_config.gpio_cd   = SDSPI_SLOT_NO_CD;
+    slot_config.gpio_wp   = SDSPI_SLOT_NO_WP;
+    slot_config.gpio_int  = GPIO_NUM_NC;
+    esp_err_t ret;
+    if(ESP_OK!=(ret=esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card))) {
+        puts(esp_err_to_name(ret));
+        return false;
+    }
+    return true;
+}
 // initialize the screen using the esp panel API
-void panel_init() {
+static void panel_init() {
     panel_transfer_buffer1 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
     panel_transfer_buffer2 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
     if(panel_transfer_buffer1==nullptr||panel_transfer_buffer2==nullptr) {
         puts("Out of memory allocating transfer buffers");
         while(1) vTaskDelay(5);
     }
-    spi_bus_config_t buscfg;
-    memset(&buscfg, 0, sizeof(buscfg));
-    buscfg.sclk_io_num = 18;
-    buscfg.mosi_io_num = 23;
-    buscfg.miso_io_num = -1;
-    buscfg.quadwp_io_num = -1;
-    buscfg.quadhd_io_num = -1;
-    buscfg.max_transfer_sz = panel_transfer_buffer_size + 8;
-
-    // Initialize the SPI bus on VSPI (SPI3)
-    spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
-
+    
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_spi_config_t io_config;
     memset(&io_config, 0, sizeof(io_config));
@@ -196,10 +250,41 @@ void setup() {
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
 #endif
+    spi_init();
+#ifndef NO_WIFI
+    if(sd_init()) {
+        puts("SD card found, looking for wifi.txt creds");
+        FILE* file = fopen("/sdcard/wifi.txt","r");
+        if(file!=nullptr) {
+            char ssid[65];
+            ssid[0]=0;
+            fgets(ssid,sizeof(ssid),file);
+            char* sv = strchr(ssid,'\n');
+            if(sv!=nullptr) *sv='\0';
+            sv = strchr(ssid,'\r');
+            if(sv!=nullptr) *sv='\0';
+            char pass[129];
+            pass[0]=0;
+            fgets(pass,sizeof(pass),file);
+            fclose(file);
+            file = nullptr;
+            sv = strchr(pass,'\n');
+            if(sv!=nullptr) *sv='\0';
+            sv = strchr(pass,'\r');
+            if(sv!=nullptr) *sv='\0';
+            printf("Read wifi.txt. Connecting to %s\n", ssid);
+            WiFi.mode(WIFI_STA);
+            WiFi.disconnect();
+            WiFi.begin(ssid,pass);
+        }
+        
+    }
+#endif
     panel_init(); // do this next
 #ifdef M5STACK_CORE2
     power.lcd_voltage(3.0);
 #endif
+    
     // init the screen and callbacks
     main_screen.dimensions({320,240});
     main_screen.buffer_size(panel_transfer_buffer_size);
@@ -207,7 +292,7 @@ void setup() {
     main_screen.buffer2(panel_transfer_buffer2);
     main_screen.background_color(color_t::black);
     srect16 sr(0,0,main_screen.dimensions().width/2,main_screen.dimensions().width/8);
-    clear_all.bounds(sr.offset(0,main_screen.dimensions().height-sr.y2-1));
+    clear_all.bounds(sr.offset(0,main_screen.dimensions().height-sr.y2-1).center_horizontal(main_screen.bounds()));
     clear_all.back_color(color32_t::dark_red);
     clear_all.color(color32_t::black);
     clear_all.border_color(color32_t::dark_gray);
@@ -236,6 +321,7 @@ void setup() {
             lcd.active_screen(qr_screen);
         }
     });
+    web_link.visible(false);
     main_screen.register_control(web_link);
     text_font = tt_font(font_stream,main_screen.dimensions().height/6,font_size_units::px);
     text_font.initialize();
@@ -297,7 +383,6 @@ void setup() {
     qr_screen.register_control(qr_return);
     lcd.active_screen(main_screen);
 }
-
 void loop()
 {
     if(Serial2.available()>=2) {
@@ -312,4 +397,26 @@ void loop()
     }
     lcd.update();
     touch.update();
+#ifndef NO_WIFI
+    if(!web_link.visible()) {
+        if(WiFi.status()==WL_CONNECTED) {
+            puts("Connected");
+            const int16_t diff = -clear_all.bounds().x1;
+            clear_all.bounds(clear_all.bounds().offset(diff,0));
+            static char qr_text[256];
+            strcpy(qr_text,"https://");
+            strcat(qr_text,WiFi.localIP().toString().c_str());
+            qr_link.text(qr_text);
+            web_link.visible(true);
+        }
+    } else {
+        if(WiFi.status()!=WL_CONNECTED) {
+            if(&lcd.active_screen()!=&main_screen) {
+                lcd.active_screen(main_screen);
+            }
+            web_link.visible(false);
+            clear_all.bounds(clear_all.bounds().center_horizontal(main_screen.bounds()));
+        }
+    }
+#endif
 }
