@@ -1,0 +1,315 @@
+#include <Arduino.h>
+#include <esp_i2c.hpp> // i2c initialization
+#ifdef M5STACK_CORE2
+#include <m5core2_power.hpp> // AXP192 power management (core2)
+#endif
+#include <driver/gpio.h>
+#include <driver/spi_master.h>
+#include <esp_lcd_panel_io.h>
+#include <esp_lcd_panel_ops.h>
+#include <esp_lcd_panel_vendor.h>
+#include <esp_lcd_panel_ili9342.h>
+#include <esp_i2c.hpp>
+#ifdef M5STACK_CORE2
+#include <ft6336.hpp>
+#endif
+#include <uix.hpp> // user interface library
+#include <gfx.hpp> // graphics library
+// font is a TTF/OTF from downloaded from fontsquirrel.com
+// converted to a header with https://honeythecodewitch.com/gfx/converter
+#define OPENSANS_REGULAR_IMPLEMENTATION
+#include "assets/OpenSans_Regular.h" // our font
+
+#include "interface.h"
+// namespace imports
+using namespace arduino; // devices
+using namespace gfx; // graphics
+using namespace uix; // user interface
+using color_t = color<rgb_pixel<16>>;
+using color32_t = color<rgba_pixel<32>>;
+
+static const_buffer_stream font_stream(OpenSans_Regular,sizeof(OpenSans_Regular));
+static tt_font text_font(font_stream,20,font_size_units::px);
+
+#ifdef M5STACK_CORE2
+using power_t = m5core2_power;
+// for AXP192 power management
+static power_t power(esp_i2c<1,21,22>::instance);
+#endif
+
+// for the touch panel
+#ifdef M5STACK_CORE2
+using touch_t = ft6336<320,280>;
+static touch_t touch(esp_i2c<1,21,22>::instance);
+#endif
+
+using screen_t = uix::screen<rgb_pixel<16>>;
+
+static uix::display lcd;
+
+// handle to the display
+static esp_lcd_panel_handle_t lcd_handle;
+static constexpr const size_t panel_transfer_buffer_size = 320*240*2/10;
+// the transfer buffers
+uint8_t* panel_transfer_buffer1 = nullptr;
+uint8_t* panel_transfer_buffer2 = nullptr;
+
+// tell UIX the DMA transfer is complete
+static bool panel_flush_ready(esp_lcd_panel_io_handle_t panel_io, 
+                                esp_lcd_panel_io_event_data_t* edata, 
+                                void* user_ctx) {
+    lcd.flush_complete();
+    return true;
+}
+// tell the lcd panel api to transfer data via DMA
+static void panel_on_flush(const rect16& bounds, const void* bmp, void* state) {
+    int x1 = bounds.x1, y1 = bounds.y1, x2 = bounds.x2 + 1, y2 = bounds.y2 + 1;
+    esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2, y2, (void*)bmp);
+}
+
+// for the touch panel
+static void panel_on_touch(point16* out_locations,
+                            size_t* in_out_locations_size,
+                            void* state) {
+    // UIX supports multiple touch points. 
+    // so does the FT6336 so we potentially have
+    // two values
+    *in_out_locations_size = 0;
+    uint16_t x,y;
+    if(touch.xy(&x,&y)) {
+        out_locations[0]=point16(x,y);
+        ++*in_out_locations_size;
+        if(touch.xy2(&x,&y)) {
+            out_locations[1]=point16(x,y);
+            ++*in_out_locations_size;
+        }
+    }
+}
+
+// initialize the screen using the esp panel API
+void panel_init() {
+    panel_transfer_buffer1 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
+    panel_transfer_buffer2 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
+    if(panel_transfer_buffer1==nullptr||panel_transfer_buffer2==nullptr) {
+        puts("Out of memory allocating transfer buffers");
+        while(1) vTaskDelay(5);
+    }
+    spi_bus_config_t buscfg;
+    memset(&buscfg, 0, sizeof(buscfg));
+    buscfg.sclk_io_num = 18;
+    buscfg.mosi_io_num = 23;
+    buscfg.miso_io_num = -1;
+    buscfg.quadwp_io_num = -1;
+    buscfg.quadhd_io_num = -1;
+    buscfg.max_transfer_sz = panel_transfer_buffer_size + 8;
+
+    // Initialize the SPI bus on VSPI (SPI3)
+    spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
+
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_io_spi_config_t io_config;
+    memset(&io_config, 0, sizeof(io_config));
+    io_config.dc_gpio_num = 15,
+    io_config.cs_gpio_num = 5,
+    io_config.pclk_hz = 40*1000*1000,
+    io_config.lcd_cmd_bits = 8,
+    io_config.lcd_param_bits = 8,
+    io_config.spi_mode = 0,
+    io_config.trans_queue_depth = 10,
+    io_config.on_color_trans_done = panel_flush_ready;
+    // Attach the LCD to the SPI bus
+    esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI3_HOST, &io_config, &io_handle);
+
+    lcd_handle = NULL;
+    esp_lcd_panel_dev_config_t panel_config;
+    memset(&panel_config, 0, sizeof(panel_config));
+    panel_config.reset_gpio_num = -1;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    panel_config.rgb_endian = LCD_RGB_ENDIAN_BGR;
+#else
+    panel_config.color_space = ESP_LCD_COLOR_SPACE_BGR;
+#endif
+    panel_config.bits_per_pixel = 16;
+
+    // Initialize the LCD configuration
+    esp_lcd_new_panel_ili9342(io_handle, &panel_config, &lcd_handle);
+
+    // Reset the display
+    esp_lcd_panel_reset(lcd_handle);
+
+    // Initialize LCD panel
+    esp_lcd_panel_init(lcd_handle);
+    // esp_lcd_panel_io_tx_param(io_handle, LCD_CMD_SLPOUT, NULL, 0);
+    //  Swap x and y axis (Different LCD screens may need different options)
+    esp_lcd_panel_swap_xy(lcd_handle, false);
+    esp_lcd_panel_set_gap(lcd_handle, 0, 0);
+    esp_lcd_panel_mirror(lcd_handle, false, false);
+    esp_lcd_panel_invert_color(lcd_handle, true);
+    // Turn on the screen
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    esp_lcd_panel_disp_on_off(lcd_handle, true);
+#else
+    esp_lcd_panel_disp_off(lcd_handle, false);
+#endif
+    lcd.buffer_size(panel_transfer_buffer_size);
+    lcd.buffer1(panel_transfer_buffer1);
+    lcd.buffer2(panel_transfer_buffer2);
+    lcd.on_flush_callback(panel_on_flush);
+    lcd.on_touch_callback(panel_on_touch);
+    touch.initialize();
+    touch.rotation(0);
+    
+}
+
+using button_t = vbutton<screen_t::control_surface_type>;
+using switch_t = vswitch<screen_t::control_surface_type>;
+using label_t = label<screen_t::control_surface_type>;
+
+// the screen/control definitions
+static screen_t main_screen;
+static button_t clear_all;
+static button_t web_link;
+static constexpr size_t switches_count = alarm_count;
+static switch_t switches[switches_count];
+static label_t switch_labels[switches_count];
+static char switch_text[switches_count][4];
+
+static screen_t qr_screen;
+using qr_t = qrcode<screen_t::control_surface_type>;
+static qr_t qr_link;
+static button_t qr_return;
+
+static void switches_on_value_changed(bool value, void* state) {
+    switch_t* psw = (switch_t*)state;
+    const size_t index = (size_t)(psw-switches);
+    printf("switch %d %s\n",(int)index,value?"on":"off");
+    uint8_t payload[2];
+    payload[0]=value?COMMAND_ID::SET_ALARM:COMMAND_ID::CLEAR_ALARM;
+    payload[1]=index;
+    Serial2.write((const char*)payload,sizeof(payload));
+    Serial2.flush(true);
+}
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(115200,SERIAL_8N1,32,33);
+    printf("Arduino version: %d.%d.%d\n",ESP_ARDUINO_VERSION_MAJOR,ESP_ARDUINO_VERSION_MINOR,ESP_ARDUINO_VERSION_PATCH);
+#ifdef M5STACK_CORE2
+    power.initialize(); // do this first
+#endif
+    panel_init(); // do this next
+#ifdef M5STACK_CORE2
+    power.lcd_voltage(3.0);
+#endif
+    // init the screen and callbacks
+    main_screen.dimensions({320,240});
+    main_screen.buffer_size(panel_transfer_buffer_size);
+    main_screen.buffer1(panel_transfer_buffer1);
+    main_screen.buffer2(panel_transfer_buffer2);
+    main_screen.background_color(color_t::black);
+    srect16 sr(0,0,main_screen.dimensions().width/2,main_screen.dimensions().width/8);
+    clear_all.bounds(sr.offset(0,main_screen.dimensions().height-sr.y2-1));
+    clear_all.back_color(color32_t::dark_red);
+    clear_all.color(color32_t::black);
+    clear_all.border_color(color32_t::dark_gray);
+    clear_all.font(font_stream);
+    clear_all.font_size(sr.height()-4);
+    clear_all.text("Reset all");
+    clear_all.radiuses({5,5});
+    clear_all.on_pressed_changed_callback([](bool pressed, void* state){
+        if(!pressed) {
+            for(size_t i = 0;i<switches_count;++i) {
+                switches[i].value(false);
+            }
+        }
+    });
+    main_screen.register_control(clear_all);
+    web_link.bounds(sr.offset(0,main_screen.dimensions().height-sr.y2-1).offset(clear_all.dimensions().width,0));
+    web_link.back_color(color32_t::light_blue);
+    web_link.color(color32_t::dark_blue);
+    web_link.border_color(color32_t::dark_gray);
+    web_link.font(font_stream);
+    web_link.font_size(sr.height()-4);
+    web_link.text("QR Link");
+    web_link.radiuses({5,5});
+    web_link.on_pressed_changed_callback([](bool pressed, void* state){
+        if(!pressed) {
+            lcd.active_screen(qr_screen);
+        }
+    });
+    main_screen.register_control(web_link);
+    text_font = tt_font(font_stream,main_screen.dimensions().height/6,font_size_units::px);
+    text_font.initialize();
+    char sz[16];
+    itoa(switches_count,sz,10);
+    text_info ti(sz,text_font);
+    size16 area;
+    text_font.measure((uint16_t)-1,ti,&area);
+    sr = srect16(0,0,main_screen.dimensions().width/7,main_screen.dimensions().height/3);
+    const uint16_t swidth = math::max(area.width,(uint16_t)sr.width());
+    const uint16_t sheight = area.height+sr.height()+2;
+    const uint16_t total_width = swidth*switches_count;
+    const uint16_t xofs = (main_screen.dimensions().width-total_width)/2;
+    const uint16_t yofs = main_screen.dimensions().height/12;
+    uint16_t x = 0;
+    for(size_t i = 0;i < switches_count; ++i) {
+        const uint16_t sofs = (swidth-sr.width())/2;
+        switch_t& s = switches[i];
+        s.bounds(srect16(x+xofs+sofs,yofs,x+xofs+sr.width()-1+sofs,yofs+sr.height()));
+        s.back_color(color32_t::dark_blue);
+        s.border_color(color32_t::dark_gray);
+        s.knob_color(color32_t::white);
+        s.knob_border_color(color32_t::dark_gray);
+        s.knob_border_width(1);
+        s.border_width(1);
+        s.radiuses({10,10});
+        s.orientation(uix_orientation::vertical);
+        s.on_value_changed_callback(switches_on_value_changed,&s);
+        main_screen.register_control(s);
+        itoa(i+1,switch_text[i],10);
+        label_t& l = switch_labels[i];
+        l.text(switch_text[i]);
+        l.bounds(srect16(x+xofs,yofs+sr.height()+1,x+xofs+swidth-1,yofs+sr.height()+area.height));
+        l.font(text_font);
+        l.color(color32_t::white);
+        l.text_justify(uix_justify::top_middle);
+        l.padding({0,0});
+        main_screen.register_control(l);
+        x+=swidth+2;
+    }
+    qr_screen.dimensions(main_screen.dimensions());
+    sr = srect16(0,0,qr_screen.dimensions().width/2,qr_screen.dimensions().width/8);
+    qr_link.bounds(srect16(0,0,qr_screen.dimensions().width/2,qr_screen.dimensions().width/2).center_horizontal(qr_screen.bounds()));
+    qr_link.text("about:blank");
+    qr_screen.register_control(qr_link);
+    qr_return.bounds(sr.center_horizontal(qr_screen.bounds()).offset(0,qr_screen.dimensions().height-sr.height()));
+    qr_return.back_color(color32_t::gray);
+    qr_return.color(color32_t::white);
+    qr_return.border_color(color32_t::dark_gray);
+    qr_return.font(font_stream);
+    qr_return.font_size(sr.height()-4);
+    qr_return.text("Main screen");
+    qr_return.radiuses({5,5});
+    qr_return.on_pressed_changed_callback([](bool pressed, void* state){
+        if(!pressed) {
+            lcd.active_screen(main_screen);
+        }
+    });
+    qr_screen.register_control(qr_return);
+    lcd.active_screen(main_screen);
+}
+
+void loop()
+{
+    if(Serial2.available()>=2) {
+        uint8_t payload[2];
+        Serial2.readBytes(payload,2);
+        if(payload[0]==ALARM_THROWN) {
+            const size_t index = payload[1];
+            if(index<switches_count) {
+                switches[index].value(true);
+            }
+        }
+    }
+    lcd.update();
+    touch.update();
+}
