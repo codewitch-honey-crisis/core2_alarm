@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 #include <stdint.h>
-
+#include <stddef.h>
 static constexpr const size_t alarm_count = 4;
 enum COMMAND_ID : uint8_t {
     SET_ALARM = 1, // followed by 1 byte, alarm id
