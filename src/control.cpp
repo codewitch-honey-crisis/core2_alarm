@@ -451,6 +451,9 @@ void setup() {
     });
     qr_screen.register_control(qr_return);
     lcd.active_screen(main_screen);
+    while(Serial2.available()) {
+        Serial2.read();
+    }
 }
 void loop()
 {
