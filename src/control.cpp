@@ -442,8 +442,6 @@ void loop()
             }
         }
     }
-    lcd.update();
-    touch.update();
 #ifndef NO_WIFI
     if(!web_link.visible()) {
         if(WiFi.status()==WL_CONNECTED) {
@@ -468,4 +466,6 @@ void loop()
         }
     }
 #endif
+    lcd.update();
+    touch.update();
 }
