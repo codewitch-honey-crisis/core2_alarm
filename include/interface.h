@@ -9,10 +9,11 @@ enum COMMAND_ID : uint8_t {
     ALARM_THROWN = 3 // followed by 1 byte, alarm id
 };
 
-// must have <alarm_count> entries
+// The fire alarm switches - must have <alarm_count> entries
 static constexpr uint8_t slave_in_pins[alarm_count] = {
     27,14,12,13
 };
+// The fire alarm enable pins - must have <alarm_count> entries
 static constexpr uint8_t slave_out_pins[alarm_count] = {
     28,10,10,11
 };

@@ -5,6 +5,7 @@ static bool tripped[alarm_count];
 static bool last[alarm_count];
 void setup() {
     memset(tripped,0,sizeof(bool)*alarm_count);
+    // adjust for atmega2560
     Serial2.begin(115200,SERIAL_8N1,16,17);
 }
 void loop() {
