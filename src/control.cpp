@@ -242,7 +242,6 @@ static void www_init() {
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         const size_t params = request->params();
         if(params>0&&request->hasParam("submit")) {
-            puts("SUBMIT");
             for(size_t i = 0;i<alarm_count;++i) {
                 switches[i].value(false);
             }
