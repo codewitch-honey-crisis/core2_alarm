@@ -4,7 +4,7 @@
     <body>
         <form method="get" action=".">
 %ALARMS%
-            <input type="submit" name="submit" value="write"/>
+            <input type="submit" name="set" value="write"/>
             <input type="submit" name="refresh" value="read"/>
         </form>
     </body>

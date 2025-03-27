@@ -43,7 +43,7 @@ static const_buffer_stream font_stream(OpenSans_Regular,sizeof(OpenSans_Regular)
 static tt_font text_font(font_stream,20,font_size_units::px);
 #ifndef NO_WIFI
 
-#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"s\" type=\"checkbox\" value=\"%d\" %s/>\
+#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/>\
 "
 AsyncWebServer httpd(80);
 #endif
@@ -241,13 +241,13 @@ static char www_input_buffer[32*1024];
 static void www_init() {
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         const size_t params = request->params();
-        if(params>0&&request->hasParam("submit")) {
+        if(params>0&&request->hasParam("set")) {
             for(size_t i = 0;i<alarm_count;++i) {
                 switches[i].value(false);
             }
             for(size_t i = 0;i<params;++i) {
                 auto p = request->getParam(i);
-                if(p->name()=="s") {
+                if(p->name()=="a") {
                     const size_t sw = atoi(p->value().c_str());
                     if(sw<alarm_count) {
                         switches[sw].value(true);
@@ -267,7 +267,39 @@ static void www_init() {
           return sz;
         });
       });
-    
+      httpd.on("/api", HTTP_GET, [](AsyncWebServerRequest *request) {
+        const size_t params = request->params();
+        if(params>0&&request->hasParam("set")) {
+            for(size_t i = 0;i<alarm_count;++i) {
+                switches[i].value(false);
+            }
+            for(size_t i = 0;i<params;++i) {
+                auto p = request->getParam(i);
+                if(p->name()=="a") {
+                    const size_t sw = atoi(p->value().c_str());
+                    if(sw<alarm_count) {
+                        switches[sw].value(true);
+                    }
+                }
+            }
+        }
+        www_input_buffer[0]=0;
+        request->send(SPIFFS, "/api.tjson", "application/json", false, [](const String &var) -> String {
+          char* sz = www_input_buffer;
+          if (var == "ALARMS") {
+            for(int i = 0;i<alarm_count;++i) {
+                if(i>0) {
+                    strcat(strlen(sz)+sz,", ");
+                } else {
+                    strcpy(sz,"        ");
+                }
+                const bool checked = switches[i].value();
+                strcat(strlen(sz)+sz,checked?"true":"false");
+            }
+          }
+          return sz;
+        });
+      });
       httpd.begin();    
 }
 #endif
@@ -346,7 +378,6 @@ void setup() {
         WiFi.disconnect();
         WiFi.begin(ssid,pass);
     }
-
 #endif
     lcd_init(); // do this next
 #ifdef M5STACK_CORE2
