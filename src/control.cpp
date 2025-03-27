@@ -1,3 +1,4 @@
+// uncomment this to disable wifi and speed upload times:
 //#define NO_WIFI
 #include <Arduino.h>
 #include <esp_i2c.hpp> // i2c initialization
@@ -294,7 +295,9 @@ void setup() {
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
 #endif
+#ifndef NO_WIFI
     SPIFFS.begin();
+#endif
     spi_init();
 #ifndef NO_WIFI
     bool loaded = false;
