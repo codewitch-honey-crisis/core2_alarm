@@ -10,7 +10,10 @@ enum COMMAND_ID : uint8_t {
 };
 
 // must have <alarm_count> entries
-static constexpr uint8_t slave_pins[alarm_count] = {
+static constexpr uint8_t slave_in_pins[alarm_count] = {
     27,14,12,13
+};
+static constexpr uint8_t slave_out_pins[alarm_count] = {
+    28,10,10,11
 };
 #endif

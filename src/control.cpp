@@ -268,9 +268,7 @@ static void www_init() {
         });
       });
     
-      httpd.begin();
-    
-        
+      httpd.begin();    
 }
 #endif
 

@@ -9,7 +9,7 @@ void setup() {
 }
 void loop() {
     for(int i = 0;i<alarm_count;++i) {
-        const bool thrown = digitalRead(slave_pins[i])!=LOW;
+        const bool thrown = digitalRead(slave_in_pins[i])!=LOW;
         if(thrown!=last[i]) {
             last[i]=thrown;
             if(thrown && !tripped[i]) {
@@ -28,11 +28,13 @@ void loop() {
             case SET_ALARM:
                 if(payload[1]<alarm_count) {    
                     tripped[payload[1]]=true;
+                    digitalWrite(slave_out_pins[payload[i]],HIGH);
                 }
             break;
             case CLEAR_ALARM:
                 if(payload[1]<alarm_count) {
                     tripped[payload[1]]=false;
+                    digitalWrite(slave_out_pins[payload[i]],LOW);
                 }
             break;
         }
