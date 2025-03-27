@@ -257,7 +257,6 @@ static void www_init() {
         }
         www_input_buffer[0]=0;
         request->send(SPIFFS, "/index.thtml", "text/html", false, [](const String &var) -> String {
-          constexpr static const size_t char_size = 32768;
           char* sz = www_input_buffer;
           if (var == "ALARMS") {
             for(int i = 0;i<alarm_count;++i) {
