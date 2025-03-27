@@ -44,7 +44,7 @@ static const_buffer_stream font_stream(OpenSans_Regular,sizeof(OpenSans_Regular)
 static tt_font text_font(font_stream,20,font_size_units::px);
 #ifndef NO_WIFI
 
-#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"s\" type=\"checkbox\" value=\"%d\" %s/>\
+#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"s\" type=\"checkbox\" value=\"%d\" %s/>\n\
 "
 AsyncWebServer httpd(80);
 #endif

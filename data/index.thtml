@@ -3,7 +3,7 @@
     <head><title>Alarm Control Panel</title></head>
     <body>
         <form method="get" action=".">
-            %ALARMS%
+%ALARMS%
             <input type="submit" name="submit" value="write"/>
             <input type="submit" name="refresh" value="read"/>
         </form>
