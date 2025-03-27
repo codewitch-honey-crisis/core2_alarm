@@ -238,7 +238,6 @@ static char switch_text[switches_count][4];
 #ifndef NO_WIFI
 static char www_input_buffer[32*1024];
 static void www_init() {
-    SPIFFS.begin();
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         const size_t params = request->params();
         if(params>0&&request->hasParam("submit")) {
@@ -297,21 +296,23 @@ void setup() {
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
 #endif
+    SPIFFS.begin();
     spi_init();
 #ifndef NO_WIFI
+    bool loaded = false;
+    char ssid[65];
+    ssid[0]=0;
+    char pass[129];
+    pass[0]=0;        
     if(sd_init()) {
         puts("SD card found, looking for wifi.txt creds");
         FILE* file = fopen("/sdcard/wifi.txt","r");
         if(file!=nullptr) {
-            char ssid[65];
-            ssid[0]=0;
             fgets(ssid,sizeof(ssid),file);
             char* sv = strchr(ssid,'\n');
             if(sv!=nullptr) *sv='\0';
             sv = strchr(ssid,'\r');
             if(sv!=nullptr) *sv='\0';
-            char pass[129];
-            pass[0]=0;
             fgets(pass,sizeof(pass),file);
             fclose(file);
             file = nullptr;
@@ -319,13 +320,34 @@ void setup() {
             if(sv!=nullptr) *sv='\0';
             sv = strchr(pass,'\r');
             if(sv!=nullptr) *sv='\0';
-            printf("Read wifi.txt. Connecting to %s\n", ssid);
-            WiFi.mode(WIFI_STA);
-            WiFi.disconnect();
-            WiFi.begin(ssid,pass);
+            loaded = true;
         }
-        
     }
+    if(!loaded) {
+        File file = SPIFFS.open("/wifi.txt","r");
+        if(!file) {
+        } else {
+            String str = file.readStringUntil('\n');
+            if(str.endsWith("\r")) {
+                str = str.substring(0,str.length()-1);
+            }
+            strncpy(ssid,str.c_str(),sizeof(ssid));
+            str = file.readStringUntil('\n');
+            file.close();
+            if(str.endsWith("\r")) {
+                str = str.substring(0,str.length()-1);
+            }
+            strncpy(pass,str.c_str(),sizeof(pass));
+            loaded = true;
+        }
+    }
+    if(loaded) {
+        printf("Read wifi.txt. Connecting to %s\n", ssid);
+        WiFi.mode(WIFI_STA);
+        WiFi.disconnect();
+        WiFi.begin(ssid,pass);
+    }
+
 #endif
     panel_init(); // do this next
 #ifdef M5STACK_CORE2
