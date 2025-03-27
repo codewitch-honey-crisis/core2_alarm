@@ -2,7 +2,10 @@
 #define CONFIG_H
 #include <stdint.h>
 #include <stddef.h>
+
+// the number of alarms
 static constexpr const size_t alarm_count = 4;
+
 enum COMMAND_ID : uint8_t {
     SET_ALARM = 1, // followed by 1 byte, alarm id
     CLEAR_ALARM = 2, // followed by 1 byte, alarm id
