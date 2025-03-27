@@ -282,7 +282,7 @@ static void switches_on_value_changed(bool value, void* state) {
     const size_t index = (size_t)(psw-switches);
     printf("switch %d %s\n",(int)index,value?"on":"off");
     uint8_t payload[2];
-    payload[0]=value?COMMAND_ID::SET_ALARM:COMMAND_ID::CLEAR_ALARM;
+    payload[0]=value?SET_ALARM:CLEAR_ALARM;
     payload[1]=index;
     Serial2.write((const char*)payload,sizeof(payload));
     Serial2.flush(true);
