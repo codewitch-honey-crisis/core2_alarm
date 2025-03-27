@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+    <head><title>Alarm Control Panel</title></head>
+    <body>
+        <form method="get" action=".">
+            %ALARMS%
+            <input type="submit" name="submit"/>
+        </form>
+    </body>
+</html>

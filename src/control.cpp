@@ -16,7 +16,10 @@
 #include <sdmmc_cmd.h>
 #include <esp_i2c.hpp>
 #ifndef NO_WIFI
+#include <SPIFFS.h>
+#include <AsyncTCP.h>
 #include <WiFi.h>
+#include <ESPAsyncWebServer.h>
 #endif
 #ifdef M5STACK_CORE2
 #include <ft6336.hpp>
@@ -38,7 +41,12 @@ using color32_t = color<rgba_pixel<32>>;
 
 static const_buffer_stream font_stream(OpenSans_Regular,sizeof(OpenSans_Regular));
 static tt_font text_font(font_stream,20,font_size_units::px);
+#ifndef NO_WIFI
 
+#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"s\" type=\"checkbox\" value=\"%d\" %s/>\
+"
+AsyncWebServer httpd(80);
+#endif
 #ifdef M5STACK_CORE2
 using power_t = m5core2_power;
 // for AXP192 power management
@@ -50,7 +58,6 @@ static power_t power(esp_i2c<1,21,22>::instance);
 using touch_t = ft6336<320,280>;
 static touch_t touch(esp_i2c<1,21,22>::instance);
 #endif
-
 
 using screen_t = uix::screen<rgb_pixel<16>>;
 
@@ -228,6 +235,47 @@ static switch_t switches[switches_count];
 static label_t switch_labels[switches_count];
 static char switch_text[switches_count][4];
 
+#ifndef NO_WIFI
+static char www_input_buffer[32*1024];
+static void www_init() {
+    SPIFFS.begin();
+    httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        const size_t params = request->params();
+        if(params>0&&request->hasParam("submit")) {
+            puts("SUBMIT");
+            for(size_t i = 0;i<alarm_count;++i) {
+                switches[i].value(false);
+            }
+            for(size_t i = 0;i<params;++i) {
+                auto p = request->getParam(i);
+                if(p->name()=="s") {
+                    const size_t sw = atoi(p->value().c_str());
+                    if(sw<alarm_count) {
+                        switches[sw].value(true);
+                    }
+                }
+            }
+        }
+        www_input_buffer[0]=0;
+        request->send(SPIFFS, "/index.thtml", "text/html", false, [](const String &var) -> String {
+          constexpr static const size_t char_size = 32768;
+          char* sz = www_input_buffer;
+          if (var == "ALARMS") {
+            for(int i = 0;i<alarm_count;++i) {
+                const bool checked = switches[i].value();
+                sprintf(strlen(sz)+sz,HTML_INPUT_FORMAT,i+1,i,checked?"checked":"");
+            }
+          }
+          return sz;
+        });
+      });
+    
+      httpd.begin();
+    
+        
+}
+#endif
+
 static screen_t qr_screen;
 using qr_t = qrcode<screen_t::control_surface_type>;
 static qr_t qr_link;
@@ -401,10 +449,11 @@ void loop()
     if(!web_link.visible()) {
         if(WiFi.status()==WL_CONNECTED) {
             puts("Connected");
+            www_init();
             const int16_t diff = -clear_all.bounds().x1;
             clear_all.bounds(clear_all.bounds().offset(diff,0));
             static char qr_text[256];
-            strcpy(qr_text,"https://");
+            strcpy(qr_text,"http://");
             strcat(qr_text,WiFi.localIP().toString().c_str());
             qr_link.text(qr_text);
             web_link.visible(true);
@@ -416,6 +465,7 @@ void loop()
             }
             web_link.visible(false);
             clear_all.bounds(clear_all.bounds().center_horizontal(main_screen.bounds()));
+            httpd.end();
         }
     }
 #endif
