@@ -325,9 +325,8 @@ void setup() {
         }
     }
     if(!loaded) {
-        File file = SPIFFS.open("/wifi.txt","r");
-        if(!file) {
-        } else {
+        if(SPIFFS.exists("/wifi.txt")) {
+            File file = SPIFFS.open("/wifi.txt","r");
             String str = file.readStringUntil('\n');
             if(str.endsWith("\r")) {
                 str = str.substring(0,str.length()-1);
