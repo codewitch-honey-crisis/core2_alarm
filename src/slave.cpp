@@ -1,20 +1,20 @@
 #include <Arduino.h>
-#include "interface.h"
+#include "config.h"
 
 static bool tripped[alarm_count];
 static bool last[alarm_count];
 void setup() {
     memset(tripped,0,sizeof(bool)*alarm_count);
 #ifdef ESP_PLATFORM
-    Serial2.begin(115200,SERIAL_8N1,16,17);
+    Serial2.begin(serial_baud_rate,SERIAL_8N1,slave_serial_pins.rx,slave_serial_pins.tx);
 #else
-    Serial2.begin(115200);
+    Serial2.begin(serial_baud_rate);
 #endif
 }
 void loop() {
     uint8_t payload[2];
     for(size_t i = 0;i<alarm_count;++i) {
-        const bool thrown = digitalRead(slave_in_pins[i])!=LOW;
+        const bool thrown = digitalRead(alarm_switch_pins[i])!=LOW;
         if(thrown!=last[i]) {
             last[i]=thrown;
             if(thrown && !tripped[i]) {
@@ -31,13 +31,13 @@ void loop() {
             case SET_ALARM:
                 if(payload[1]<alarm_count) {    
                     tripped[payload[1]]=true;
-                    digitalWrite(slave_out_pins[payload[1]],HIGH);
+                    digitalWrite(alarm_enable_pins[payload[1]],HIGH);
                 }
             break;
             case CLEAR_ALARM:
                 if(payload[1]<alarm_count) {
                     tripped[payload[1]]=false;
-                    digitalWrite(slave_out_pins[payload[1]],LOW);
+                    digitalWrite(alarm_enable_pins[payload[1]],LOW);
                 }
             break;
         }

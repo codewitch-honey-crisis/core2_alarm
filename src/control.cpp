@@ -31,7 +31,7 @@
 #define OPENSANS_REGULAR_IMPLEMENTATION
 #include "assets/OpenSans_Regular.h" // our font
 
-#include "interface.h"
+#include "config.h"
 // namespace imports
 using namespace arduino; // devices
 using namespace gfx; // graphics
@@ -321,7 +321,7 @@ static void switches_on_value_changed(bool value, void* state) {
 }
 void setup() {
     Serial.begin(115200);
-    Serial2.begin(115200,SERIAL_8N1,32,33);
+    Serial2.begin(serial_baud_rate,SERIAL_8N1,control_serial_pins.rx,control_serial_pins.tx);
     printf("Arduino version: %d.%d.%d\n",ESP_ARDUINO_VERSION_MAJOR,ESP_ARDUINO_VERSION_MINOR,ESP_ARDUINO_VERSION_PATCH);
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
