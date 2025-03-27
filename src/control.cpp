@@ -1,8 +1,8 @@
 // uncomment this to disable wifi and speed upload times:
 //#define NO_WIFI
 #include <Arduino.h>
-#include <esp_i2c.hpp> // i2c initialization
 #ifdef M5STACK_CORE2
+#include <esp_i2c.hpp> // i2c initialization
 #include <m5core2_power.hpp> // AXP192 power management (core2)
 #endif
 #include <driver/gpio.h>
@@ -69,7 +69,6 @@ static constexpr const size_t lcd_transfer_buffer_size = 320*240*2/10;
 // the transfer buffers
 static uint8_t* lcd_transfer_buffer1 = nullptr;
 static uint8_t* lcd_transfer_buffer2 = nullptr;
-static sdmmc_card_t *card = nullptr;
 
 // tell UIX the DMA transfer is complete
 static bool lcd_flush_ready(esp_lcd_panel_io_handle_t lcd_io, 
@@ -193,6 +192,7 @@ static label_t switch_labels[switches_count];
 static char switch_text[switches_count][4];
 
 #ifndef NO_WIFI
+static sdmmc_card_t *card = nullptr;
 static bool sd_init() {
     // Options for mounting the filesystem.
     // If format_if_mount_failed is set to true, SD card will be partitioned and
