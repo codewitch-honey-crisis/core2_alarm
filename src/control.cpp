@@ -66,27 +66,27 @@ static uix::display lcd;
 
 // handle to the display
 static esp_lcd_panel_handle_t lcd_handle;
-static constexpr const size_t panel_transfer_buffer_size = 320*240*2/10;
+static constexpr const size_t lcd_transfer_buffer_size = 320*240*2/10;
 // the transfer buffers
-static uint8_t* panel_transfer_buffer1 = nullptr;
-static uint8_t* panel_transfer_buffer2 = nullptr;
+static uint8_t* lcd_transfer_buffer1 = nullptr;
+static uint8_t* lcd_transfer_buffer2 = nullptr;
 static sdmmc_card_t *card = nullptr;
 
 // tell UIX the DMA transfer is complete
-static bool panel_flush_ready(esp_lcd_panel_io_handle_t panel_io, 
+static bool lcd_flush_ready(esp_lcd_panel_io_handle_t lcd_io, 
                                 esp_lcd_panel_io_event_data_t* edata, 
                                 void* user_ctx) {
     lcd.flush_complete();
     return true;
 }
 // tell the lcd panel api to transfer data via DMA
-static void panel_on_flush(const rect16& bounds, const void* bmp, void* state) {
+static void lcd_on_flush(const rect16& bounds, const void* bmp, void* state) {
     int x1 = bounds.x1, y1 = bounds.y1, x2 = bounds.x2 + 1, y2 = bounds.y2 + 1;
     esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2, y2, (void*)bmp);
 }
 
 // for the touch panel
-static void panel_on_touch(point16* out_locations,
+static void lcd_on_touch(point16* out_locations,
                             size_t* in_out_locations_size,
                             void* state) {
     // UIX supports multiple touch points. 
@@ -111,7 +111,7 @@ static void spi_init() {
     buscfg.miso_io_num = 38;
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
-    buscfg.max_transfer_sz = gfx::math::max(panel_transfer_buffer_size,(size_t)(16*1024)) + 8;
+    buscfg.max_transfer_sz = gfx::math::max(lcd_transfer_buffer_size,(size_t)(16*1024)) + 8;
     // Initialize the SPI bus on VSPI (SPI3)
     spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
 }
@@ -160,10 +160,10 @@ static bool sd_init() {
     return true;
 }
 // initialize the screen using the esp panel API
-static void panel_init() {
-    panel_transfer_buffer1 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
-    panel_transfer_buffer2 = (uint8_t*)heap_caps_malloc(panel_transfer_buffer_size,MALLOC_CAP_DMA);
-    if(panel_transfer_buffer1==nullptr||panel_transfer_buffer2==nullptr) {
+static void lcd_init() {
+    lcd_transfer_buffer1 = (uint8_t*)heap_caps_malloc(lcd_transfer_buffer_size,MALLOC_CAP_DMA);
+    lcd_transfer_buffer2 = (uint8_t*)heap_caps_malloc(lcd_transfer_buffer_size,MALLOC_CAP_DMA);
+    if(lcd_transfer_buffer1==nullptr||lcd_transfer_buffer2==nullptr) {
         puts("Out of memory allocating transfer buffers");
         while(1) vTaskDelay(5);
     }
@@ -178,23 +178,23 @@ static void panel_init() {
     io_config.lcd_param_bits = 8,
     io_config.spi_mode = 0,
     io_config.trans_queue_depth = 10,
-    io_config.on_color_trans_done = panel_flush_ready;
+    io_config.on_color_trans_done = lcd_flush_ready;
     // Attach the LCD to the SPI bus
     esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI3_HOST, &io_config, &io_handle);
 
     lcd_handle = NULL;
-    esp_lcd_panel_dev_config_t panel_config;
-    memset(&panel_config, 0, sizeof(panel_config));
-    panel_config.reset_gpio_num = -1;
+    esp_lcd_panel_dev_config_t lcd_config;
+    memset(&lcd_config, 0, sizeof(lcd_config));
+    lcd_config.reset_gpio_num = -1;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    panel_config.rgb_endian = LCD_RGB_ENDIAN_BGR;
+    lcd_config.rgb_endian = LCD_RGB_ENDIAN_BGR;
 #else
-    panel_config.color_space = ESP_LCD_COLOR_SPACE_BGR;
+    lcd_config.color_space = ESP_LCD_COLOR_SPACE_BGR;
 #endif
-    panel_config.bits_per_pixel = 16;
+    lcd_config.bits_per_pixel = 16;
 
     // Initialize the LCD configuration
-    esp_lcd_new_panel_ili9342(io_handle, &panel_config, &lcd_handle);
+    esp_lcd_new_panel_ili9342(io_handle, &lcd_config, &lcd_handle);
 
     // Reset the display
     esp_lcd_panel_reset(lcd_handle);
@@ -213,11 +213,11 @@ static void panel_init() {
 #else
     esp_lcd_panel_disp_off(lcd_handle, false);
 #endif
-    lcd.buffer_size(panel_transfer_buffer_size);
-    lcd.buffer1(panel_transfer_buffer1);
-    lcd.buffer2(panel_transfer_buffer2);
-    lcd.on_flush_callback(panel_on_flush);
-    lcd.on_touch_callback(panel_on_touch);
+    lcd.buffer_size(lcd_transfer_buffer_size);
+    lcd.buffer1(lcd_transfer_buffer1);
+    lcd.buffer2(lcd_transfer_buffer2);
+    lcd.on_flush_callback(lcd_on_flush);
+    lcd.on_touch_callback(lcd_on_touch);
     touch.initialize();
     touch.rotation(0);
     
@@ -348,16 +348,16 @@ void setup() {
     }
 
 #endif
-    panel_init(); // do this next
+    lcd_init(); // do this next
 #ifdef M5STACK_CORE2
     power.lcd_voltage(3.0);
 #endif
     
     // init the screen and callbacks
     main_screen.dimensions({320,240});
-    main_screen.buffer_size(panel_transfer_buffer_size);
-    main_screen.buffer1(panel_transfer_buffer1);
-    main_screen.buffer2(panel_transfer_buffer2);
+    main_screen.buffer_size(lcd_transfer_buffer_size);
+    main_screen.buffer1(lcd_transfer_buffer1);
+    main_screen.buffer2(lcd_transfer_buffer2);
     main_screen.background_color(color_t::black);
     srect16 sr(0,0,main_screen.dimensions().width/2,main_screen.dimensions().width/8);
     clear_all.bounds(sr.offset(0,main_screen.dimensions().height-sr.y2-1).center_horizontal(main_screen.bounds()));
