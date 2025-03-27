@@ -14,9 +14,8 @@
 #include <sys/unistd.h>
 #include <sys/stat.h>
 #include <esp_vfs_fat.h>
-#include <sdmmc_cmd.h>
-#include <esp_i2c.hpp>
 #ifndef NO_WIFI
+#include <sdmmc_cmd.h>
 #include <SPIFFS.h>
 #include <AsyncTCP.h>
 #include <WiFi.h>
@@ -115,50 +114,7 @@ static void spi_init() {
     // Initialize the SPI bus on VSPI (SPI3)
     spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
 }
-static bool sd_init() {
-    // Options for mounting the filesystem.
-    // If format_if_mount_failed is set to true, SD card will be partitioned and
-    // formatted in case when mounting fails.
-    esp_vfs_fat_sdmmc_mount_config_t mount_config;
-    memset(&mount_config,0,sizeof(mount_config));
-    mount_config.format_if_mount_failed = false;
-    mount_config.max_files = 5;
-    mount_config.allocation_unit_size = 0;
-    
-    static const char mount_point[] = "/sdcard";
-    sdmmc_host_t host;
-    memset(&host,0,sizeof(host));
 
-    host.flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG;
-    host.slot = SPI3_HOST;
-    host.max_freq_khz = SDMMC_FREQ_DEFAULT;
-    host.io_voltage = 3.3f;
-    host.init = &sdspi_host_init;
-    host.set_bus_width = NULL;
-    host.get_bus_width = NULL;
-    host.set_bus_ddr_mode = NULL;
-    host.set_card_clk = &sdspi_host_set_card_clk;
-    host.set_cclk_always_on = NULL;
-    host.do_transaction = &sdspi_host_do_transaction;
-    host.deinit_p = &sdspi_host_remove_device;
-    host.io_int_enable = &sdspi_host_io_int_enable;
-    host.io_int_wait = &sdspi_host_io_int_wait;
-    host.command_timeout_ms = 0;
-    // This initializes the slot without card detect (CD) and write protect (WP) signals.
-    sdspi_device_config_t slot_config;
-    memset(&slot_config,0,sizeof(slot_config));
-    slot_config.host_id   = (spi_host_device_t)host.slot;
-    slot_config.gpio_cs   = (gpio_num_t)4;
-    slot_config.gpio_cd   = SDSPI_SLOT_NO_CD;
-    slot_config.gpio_wp   = SDSPI_SLOT_NO_WP;
-    slot_config.gpio_int  = GPIO_NUM_NC;
-    esp_err_t ret;
-    if(ESP_OK!=(ret=esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card))) {
-        puts(esp_err_to_name(ret));
-        return false;
-    }
-    return true;
-}
 // initialize the screen using the esp panel API
 static void lcd_init() {
     lcd_transfer_buffer1 = (uint8_t*)heap_caps_malloc(lcd_transfer_buffer_size,MALLOC_CAP_DMA);
@@ -237,6 +193,50 @@ static label_t switch_labels[switches_count];
 static char switch_text[switches_count][4];
 
 #ifndef NO_WIFI
+static bool sd_init() {
+    // Options for mounting the filesystem.
+    // If format_if_mount_failed is set to true, SD card will be partitioned and
+    // formatted in case when mounting fails.
+    esp_vfs_fat_sdmmc_mount_config_t mount_config;
+    memset(&mount_config,0,sizeof(mount_config));
+    mount_config.format_if_mount_failed = false;
+    mount_config.max_files = 5;
+    mount_config.allocation_unit_size = 0;
+    
+    static const char mount_point[] = "/sdcard";
+    sdmmc_host_t host;
+    memset(&host,0,sizeof(host));
+
+    host.flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG;
+    host.slot = SPI3_HOST;
+    host.max_freq_khz = SDMMC_FREQ_DEFAULT;
+    host.io_voltage = 3.3f;
+    host.init = &sdspi_host_init;
+    host.set_bus_width = NULL;
+    host.get_bus_width = NULL;
+    host.set_bus_ddr_mode = NULL;
+    host.set_card_clk = &sdspi_host_set_card_clk;
+    host.set_cclk_always_on = NULL;
+    host.do_transaction = &sdspi_host_do_transaction;
+    host.deinit_p = &sdspi_host_remove_device;
+    host.io_int_enable = &sdspi_host_io_int_enable;
+    host.io_int_wait = &sdspi_host_io_int_wait;
+    host.command_timeout_ms = 0;
+    // This initializes the slot without card detect (CD) and write protect (WP) signals.
+    sdspi_device_config_t slot_config;
+    memset(&slot_config,0,sizeof(slot_config));
+    slot_config.host_id   = (spi_host_device_t)host.slot;
+    slot_config.gpio_cs   = (gpio_num_t)4;
+    slot_config.gpio_cd   = SDSPI_SLOT_NO_CD;
+    slot_config.gpio_wp   = SDSPI_SLOT_NO_WP;
+    slot_config.gpio_int  = GPIO_NUM_NC;
+    esp_err_t ret;
+    if(ESP_OK!=(ret=esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card))) {
+        puts(esp_err_to_name(ret));
+        return false;
+    }
+    return true;
+}
 static char www_input_buffer[32*1024];
 static void www_init() {
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
