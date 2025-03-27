@@ -9,12 +9,12 @@ void setup() {
     Serial2.begin(115200,SERIAL_8N1,16,17);
 }
 void loop() {
+    uint8_t payload[2];
     for(int i = 0;i<alarm_count;++i) {
         const bool thrown = digitalRead(slave_in_pins[i])!=LOW;
         if(thrown!=last[i]) {
             last[i]=thrown;
             if(thrown && !tripped[i]) {
-                uint8_t payload[2];
                 payload[0]=ALARM_THROWN;
                 payload[1]=i;
                 Serial2.write(payload,sizeof(payload));
@@ -23,7 +23,6 @@ void loop() {
         }
     }
     if(Serial2.available()>=2) {
-        uint8_t payload[2];
         Serial2.read(payload,sizeof(payload));
         switch(payload[0]) {
             case SET_ALARM:
