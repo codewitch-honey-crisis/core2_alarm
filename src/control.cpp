@@ -452,7 +452,7 @@ void setup() {
                         font_size_units::px);
     text_font.initialize();
     char sz[16];
-    itoa(switches_count, sz, 10);
+    itoa(switches_count-1, sz, 10);
     text_info ti(sz, text_font);
     size16 area;
     // measure the size of the largest number and set all the text labels to that width:
