@@ -198,9 +198,6 @@ static char switch_text[switches_count][4];
 #ifndef NO_WIFI
 static sdmmc_card_t* card = nullptr;
 static bool sd_init() {
-    // Options for mounting the filesystem.
-    // If format_if_mount_failed is set to true, SD card will be partitioned and
-    // formatted in case when mounting fails.
     esp_vfs_fat_sdmmc_mount_config_t mount_config;
     memset(&mount_config, 0, sizeof(mount_config));
     mount_config.format_if_mount_failed = false;
