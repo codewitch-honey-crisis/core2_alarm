@@ -152,10 +152,13 @@ static void lcd_init() {
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_spi_config_t io_config;
     memset(&io_config, 0, sizeof(io_config));
-    io_config.dc_gpio_num = 15, io_config.cs_gpio_num = 5,
-    io_config.pclk_hz = 40 * 1000 * 1000, io_config.lcd_cmd_bits = 8,
-    io_config.lcd_param_bits = 8, io_config.spi_mode = 0,
-    io_config.trans_queue_depth = 10,
+    io_config.dc_gpio_num = 15;
+    io_config.cs_gpio_num = 5;
+    io_config.pclk_hz = 40 * 1000 * 1000;
+    io_config.lcd_cmd_bits = 8;
+    io_config.lcd_param_bits = 8;
+    io_config.spi_mode = 0;
+    io_config.trans_queue_depth = 10;
     io_config.on_color_trans_done = lcd_flush_ready;
     // Attach the LCD to the SPI bus
     esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI3_HOST, &io_config,
