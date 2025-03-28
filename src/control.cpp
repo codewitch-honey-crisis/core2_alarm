@@ -267,6 +267,7 @@ static void www_init() {
         request->send(SPIFFS, "/index.thtml", "text/html", false,
                     [](const String& var) -> String {
                         String result;
+                        result.reserve(4096);
                         char input_buffer[256];
                         if (var == "ALARMS") {
                             for (int i = 0; i < alarm_count; ++i) {
@@ -300,6 +301,7 @@ static void www_init() {
         request->send(SPIFFS, "/api.tjson", "application/json", false,
                     [](const String& var) -> String {
                         String result;  
+                        result.reserve(2048);
                         if (var == "ALARMS") {
                             for (int i = 0; i < alarm_count; ++i) {
                                 if (i > 0) {
