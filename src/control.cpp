@@ -68,6 +68,20 @@ using screen_t = uix::screen<rgb_pixel<16>>;
 
 static uix::display lcd;
 
+
+using button_t = vbutton<screen_t::control_surface_type>;
+using switch_t = vswitch<screen_t::control_surface_type>;
+using label_t = label<screen_t::control_surface_type>;
+
+// the screen/control definitions
+static screen_t main_screen;
+static button_t reset_all;
+static button_t web_link;
+static constexpr size_t switches_count = alarm_count;
+static switch_t switches[switches_count];
+static label_t switch_labels[switches_count];
+static char switch_text[switches_count][4];
+
 static esp_lcd_panel_handle_t lcd_handle;
 static constexpr const size_t lcd_transfer_buffer_size = screen_dimensions.width * screen_dimensions.height * ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 // the transfer buffers
@@ -181,19 +195,6 @@ static void lcd_init() {
     touch.rotation(0);
 #endif
 }
-
-using button_t = vbutton<screen_t::control_surface_type>;
-using switch_t = vswitch<screen_t::control_surface_type>;
-using label_t = label<screen_t::control_surface_type>;
-
-// the screen/control definitions
-static screen_t main_screen;
-static button_t reset_all;
-static button_t web_link;
-static constexpr size_t switches_count = alarm_count;
-static switch_t switches[switches_count];
-static label_t switch_labels[switches_count];
-static char switch_text[switches_count][4];
 
 #ifndef NO_WIFI
 static sdmmc_card_t* card = nullptr;
