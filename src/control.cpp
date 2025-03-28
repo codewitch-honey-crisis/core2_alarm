@@ -68,7 +68,6 @@ using screen_t = uix::screen<rgb_pixel<16>>;
 
 static uix::display lcd;
 
-
 using button_t = vbutton<screen_t::control_surface_type>;
 using switch_t = vswitch<screen_t::control_surface_type>;
 using label_t = label<screen_t::control_surface_type>;
