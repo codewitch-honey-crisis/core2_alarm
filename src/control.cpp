@@ -569,6 +569,7 @@ void loop() {
             reset_all.bounds(
                 reset_all.bounds().center_horizontal(main_screen.bounds()));
             httpd.end();
+            WiFi.disconnect(true);
         }
     }
 #endif
