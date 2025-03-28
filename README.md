@@ -18,7 +18,11 @@
 ## Web interface
 The QR Link provides a QR code to get to the website. The JSON/REST api is located at ./api at the same location
 
-a JSON return example:
+a JSON example:
+
+`http://192.168.50.14/api`
+
+Where the IP is replaced with the local network IP of the Core2
 
 ```json
 {
