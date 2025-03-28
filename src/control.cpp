@@ -82,6 +82,11 @@ static switch_t switches[switches_count];
 static label_t switch_labels[switches_count];
 static char switch_text[switches_count][4];
 
+static screen_t qr_screen;
+using qr_t = qrcode<screen_t::control_surface_type>;
+static qr_t qr_link;
+static button_t qr_return;
+
 static esp_lcd_panel_handle_t lcd_handle;
 static constexpr const size_t lcd_transfer_buffer_size = screen_dimensions.width * screen_dimensions.height * ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 // the transfer buffers
@@ -315,11 +320,6 @@ static void www_init() {
     httpd.begin();
 }
 #endif
-
-static screen_t qr_screen;
-using qr_t = qrcode<screen_t::control_surface_type>;
-static qr_t qr_link;
-static button_t qr_return;
 
 static void switches_on_value_changed(bool value, void* state) {
     switch_t* psw = (switch_t*)state;
