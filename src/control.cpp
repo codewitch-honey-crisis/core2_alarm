@@ -182,7 +182,7 @@ using label_t = label<screen_t::control_surface_type>;
 
 // the screen/control definitions
 static screen_t main_screen;
-static button_t clear_all;
+static button_t reset_all;
 static button_t web_link;
 static constexpr size_t switches_count = alarm_count;
 static switch_t switches[switches_count];
@@ -343,6 +343,11 @@ void setup() {
     ssid[0] = 0;
     char pass[129];
     pass[0] = 0;
+    // attempt to initialize the SD and if it succeeds, look for /wifi.txt
+    // Note we're using the ESP-IDF and C API for the SD because
+    // it's on the same bus as the display, which we must use ESP-IDF
+    // for, and Arduino and ESP-IDF don't play nice together in this
+    // respect.
     if (sd_init()) {
         puts("SD card found, looking for wifi.txt creds");
         FILE* file = fopen("/sdcard/wifi.txt", "r");
@@ -363,7 +368,8 @@ void setup() {
             loaded = true;
         }
     }
-    SPIFFS.begin();
+    SPIFFS.begin(); // <-- even if we don't need it below, we need it later for the web requests
+    // check SPIFFS for /wifi.txt if the SD wasn't present or didn't have it.
     if (!loaded) {
         if (SPIFFS.exists("/wifi.txt")) {
             File file = SPIFFS.open("/wifi.txt", "r");
@@ -382,6 +388,7 @@ void setup() {
             loaded = true;
         }
     }
+    // if we found wifi.txt, start the connection process:
     if (loaded) {
         printf("Read wifi.txt. Connecting to %s\n", ssid);
         WiFi.mode(WIFI_STA);
@@ -389,38 +396,37 @@ void setup() {
         WiFi.begin(ssid, pass);
     }
 #endif
-    lcd_init();  // do this next
+    // initialize the display
+    lcd_init();
 #ifdef M5STACK_CORE2
+    // draw a little less power
     power.lcd_voltage(3.0);
 #endif
-
-    // init the screen and callbacks
+    // init the main screen
     main_screen.dimensions({320, 240});
-    main_screen.buffer_size(lcd_transfer_buffer_size);
-    main_screen.buffer1(lcd_transfer_buffer1);
-    main_screen.buffer2(lcd_transfer_buffer2);
     main_screen.background_color(color_t::black);
+    // initialize the controls
     srect16 sr(0, 0, main_screen.dimensions().width / 2,
                main_screen.dimensions().width / 8);
-    clear_all.bounds(sr.offset(0, main_screen.dimensions().height - sr.y2 - 1)
+    reset_all.bounds(sr.offset(0, main_screen.dimensions().height - sr.y2 - 1)
                          .center_horizontal(main_screen.bounds()));
-    clear_all.back_color(color32_t::dark_red);
-    clear_all.color(color32_t::black);
-    clear_all.border_color(color32_t::dark_gray);
-    clear_all.font(font_stream);
-    clear_all.font_size(sr.height() - 4);
-    clear_all.text("Reset all");
-    clear_all.radiuses({5, 5});
-    clear_all.on_pressed_changed_callback([](bool pressed, void* state) {
+    reset_all.back_color(color32_t::dark_red);
+    reset_all.color(color32_t::black);
+    reset_all.border_color(color32_t::dark_gray);
+    reset_all.font(font_stream);
+    reset_all.font_size(sr.height() - 4);
+    reset_all.text("Reset all");
+    reset_all.radiuses({5, 5});
+    reset_all.on_pressed_changed_callback([](bool pressed, void* state) {
         if (!pressed) {
             for (size_t i = 0; i < switches_count; ++i) {
                 switches[i].value(false);
             }
         }
     });
-    main_screen.register_control(clear_all);
+    main_screen.register_control(reset_all);
     web_link.bounds(sr.offset(0, main_screen.dimensions().height - sr.y2 - 1)
-                        .offset(clear_all.dimensions().width, 0));
+                        .offset(reset_all.dimensions().width, 0));
     web_link.back_color(color32_t::light_blue);
     web_link.color(color32_t::dark_blue);
     web_link.border_color(color32_t::dark_gray);
@@ -442,6 +448,7 @@ void setup() {
     itoa(switches_count, sz, 10);
     text_info ti(sz, text_font);
     size16 area;
+    // measure the size of the largest number and set all the text labels to that width:
     text_font.measure((uint16_t)-1, ti, &area);
     sr = srect16(0, 0, main_screen.dimensions().width / 7,
                  main_screen.dimensions().height / 3);
@@ -451,6 +458,7 @@ void setup() {
     const uint16_t xofs = (main_screen.dimensions().width - total_width) / 2;
     const uint16_t yofs = main_screen.dimensions().height / 12;
     uint16_t x = 0;
+    // init the fire switch controls + labels
     for (size_t i = 0; i < switches_count; ++i) {
         const uint16_t sofs = (swidth - sr.width()) / 2;
         switch_t& s = switches[i];
@@ -479,7 +487,9 @@ void setup() {
         main_screen.register_control(l);
         x += swidth + 2;
     }
+    // initialize the QR screen
     qr_screen.dimensions(main_screen.dimensions());
+    // initialize the controls
     sr = srect16(0, 0, qr_screen.dimensions().width / 2,
                  qr_screen.dimensions().width / 8);
     qr_link.bounds(srect16(0, 0, qr_screen.dimensions().width / 2,
@@ -503,15 +513,19 @@ void setup() {
         }
     });
     qr_screen.register_control(qr_return);
+    // set the display to our main screen
     lcd.active_screen(main_screen);
+    // clear any junk from the serial buffer on start
     while (Serial2.available()) {
         Serial2.read();
     }
 }
 void loop() {
+    // do we have some data?
     if (Serial2.available() >= 2) {
         uint8_t payload[2];
         Serial2.readBytes(payload, 2);
+        // throw the alarm if we got a request
         if (payload[0] == ALARM_THROWN) {
             const size_t index = payload[1];
             if (index < switches_count) {
@@ -520,30 +534,39 @@ void loop() {
         }
     }
 #ifndef NO_WIFI
-    if (!web_link.visible()) {
+    if (!web_link.visible()) { // not connected yet
         if (WiFi.status() == WL_CONNECTED) {
             puts("Connected");
+            // initialize the web server
             www_init();
-            const int16_t diff = -clear_all.bounds().x1;
-            clear_all.bounds(clear_all.bounds().offset(diff, 0));
+            // move the "Reset all" button to the left
+            const int16_t diff = -reset_all.bounds().x1;
+            reset_all.bounds(reset_all.bounds().offset(diff, 0));
+            // set the QR text to our website
             static char qr_text[256];
             strcpy(qr_text, "http://");
             strcat(qr_text, WiFi.localIP().toString().c_str());
             qr_link.text(qr_text);
+            // now show the link
             web_link.visible(true);
         }
     } else {
         if (WiFi.status() != WL_CONNECTED) {
+            // we disconnected for some reason
+            // if it's not the main screen, set it to the main screen
             if (&lcd.active_screen() != &main_screen) {
                 lcd.active_screen(main_screen);
             }
+            // hide the QR Link button
             web_link.visible(false);
-            clear_all.bounds(
-                clear_all.bounds().center_horizontal(main_screen.bounds()));
+            // center the "Reset all" button
+            reset_all.bounds(
+                reset_all.bounds().center_horizontal(main_screen.bounds()));
             httpd.end();
         }
     }
 #endif
+    // update the display and touch device
     lcd.update();
     touch.update();
 }
