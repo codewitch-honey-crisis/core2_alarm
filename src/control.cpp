@@ -238,20 +238,23 @@ static char www_input_buffer[32*1024];
 static void www_init() {
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         const size_t params = request->params();
+        bool values[alarm_count];
+        memset(values,0,sizeof(values));
         if(params>0&&request->hasParam("set")) {
-            for(size_t i = 0;i<alarm_count;++i) {
-                switches[i].value(false);
-            }
             for(size_t i = 0;i<params;++i) {
                 auto p = request->getParam(i);
                 if(p->name()=="a") {
                     const size_t sw = atoi(p->value().c_str());
                     if(sw<alarm_count) {
-                        switches[sw].value(true);
+                        values[sw]=true;
                     }
                 }
             }
+            for(size_t i = 0;i<alarm_count;++i) {
+                switches[i].value(values[i]);
+            }
         }
+        
         www_input_buffer[0]=0;
         request->send(SPIFFS, "/index.thtml", "text/html", false, [](const String &var) -> String {
           char* sz = www_input_buffer;
@@ -274,14 +277,15 @@ static void www_init() {
                 if(p->name()=="a") {
                     const size_t sw = atoi(p->value().c_str());
                     if(sw<alarm_count) {
-                        values[i]=true;
+                        values[sw]=true;
                     }
                 }
             }
+            for(size_t i = 0;i<alarm_count;++i) {
+                switches[i].value(values[i]);
+            }
         }
-        for(size_t i = 0;i<alarm_count;++i) {
-            switches[i].value(values[i]);
-        }
+        
         www_input_buffer[0]=0;
         request->send(SPIFFS, "/api.tjson", "application/json", false, [](const String &var) -> String {
           char* sz = www_input_buffer;
