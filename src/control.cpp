@@ -43,7 +43,7 @@ static const_buffer_stream font_stream(OpenSans_Regular,sizeof(OpenSans_Regular)
 static tt_font text_font(font_stream,20,font_size_units::px);
 #ifndef NO_WIFI
 
-#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/>\
+#define HTML_INPUT_FORMAT "            <label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/><br />\
 "
 AsyncWebServer httpd(80);
 #endif
@@ -324,9 +324,6 @@ void setup() {
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
 #endif
-#ifndef NO_WIFI
-    SPIFFS.begin();
-#endif
     spi_init();
 #ifndef NO_WIFI
     bool loaded = false;
@@ -353,6 +350,7 @@ void setup() {
             loaded = true;
         }
     }
+    SPIFFS.begin();
     if(!loaded) {
         if(SPIFFS.exists("/wifi.txt")) {
             File file = SPIFFS.open("/wifi.txt","r");
