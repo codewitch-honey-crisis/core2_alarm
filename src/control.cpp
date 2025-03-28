@@ -265,20 +265,22 @@ static void www_init() {
         });
       });
       httpd.on("/api", HTTP_GET, [](AsyncWebServerRequest *request) {
+        bool values[alarm_count];
+        memset(values,0,sizeof(values));
         const size_t params = request->params();
         if(params>0&&request->hasParam("set")) {
-            for(size_t i = 0;i<alarm_count;++i) {
-                switches[i].value(false);
-            }
             for(size_t i = 0;i<params;++i) {
                 auto p = request->getParam(i);
                 if(p->name()=="a") {
                     const size_t sw = atoi(p->value().c_str());
                     if(sw<alarm_count) {
-                        switches[sw].value(true);
+                        values[i]=true;
                     }
                 }
             }
+        }
+        for(size_t i = 0;i<alarm_count;++i) {
+            switches[i].value(values[i]);
         }
         www_input_buffer[0]=0;
         request->send(SPIFFS, "/api.tjson", "application/json", false, [](const String &var) -> String {
@@ -323,7 +325,7 @@ void setup() {
 #ifdef M5STACK_CORE2
     power.initialize(); // do this first
 #endif
-    spi_init();
+    spi_init(); // used by the LCD and SD reader
 #ifndef NO_WIFI
     bool loaded = false;
     char ssid[65];
@@ -334,6 +336,7 @@ void setup() {
         puts("SD card found, looking for wifi.txt creds");
         FILE* file = fopen("/sdcard/wifi.txt","r");
         if(file!=nullptr) {
+            // parse the file
             fgets(ssid,sizeof(ssid),file);
             char* sv = strchr(ssid,'\n');
             if(sv!=nullptr) *sv='\0';
@@ -353,6 +356,7 @@ void setup() {
     if(!loaded) {
         if(SPIFFS.exists("/wifi.txt")) {
             File file = SPIFFS.open("/wifi.txt","r");
+            // parse the file
             String str = file.readStringUntil('\n');
             if(str.endsWith("\r")) {
                 str = str.substring(0,str.length()-1);
