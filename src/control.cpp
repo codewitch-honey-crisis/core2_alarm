@@ -43,9 +43,9 @@ static const_buffer_stream font_stream(OpenSans_Regular,
 static tt_font text_font(font_stream, 20, font_size_units::px);
 #ifndef NO_WIFI
 
-#define HTML_INPUT_FORMAT                                               \
+static constexpr const char* html_input_format =                       \
     "            <label>%d</label><input name=\"a\" type=\"checkbox\" " \
-    "value=\"%d\" %s/><br />\n"
+    "value=\"%d\" %s/><br />\n";
 AsyncWebServer httpd(80);
 #endif
 #ifdef M5STACK_CORE2
@@ -60,13 +60,14 @@ using touch_t = ft6336<320, 280>;
 static touch_t touch(esp_i2c<1, 21, 22>::instance);
 #endif
 
+static constexpr const size16 screen_dimensions(320,240);
+
 using screen_t = uix::screen<rgb_pixel<16>>;
 
 static uix::display lcd;
 
-// handle to the display
 static esp_lcd_panel_handle_t lcd_handle;
-static constexpr const size_t lcd_transfer_buffer_size = 320 * 240 * 2 / 10;
+static constexpr const size_t lcd_transfer_buffer_size = screen_dimensions.width * screen_dimensions.height * ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 // the transfer buffers
 static uint8_t* lcd_transfer_buffer1 = nullptr;
 static uint8_t* lcd_transfer_buffer2 = nullptr;
@@ -260,13 +261,13 @@ static void www_init() {
         request->send(SPIFFS, "/index.thtml", "text/html", false,
                     [](const String& var) -> String {
                         String result;
-                        char www_input_buffer[256];
+                        char input_buffer[256];
                         if (var == "ALARMS") {
                             for (int i = 0; i < alarm_count; ++i) {
                                 const bool checked = switches[i].value();
-                                snprintf(www_input_buffer,sizeof(www_input_buffer), HTML_INPUT_FORMAT,
+                                snprintf(input_buffer,sizeof(input_buffer), html_input_format,
                                         i + 1, i, checked ? "checked" : "");
-                                result+=www_input_buffer;
+                                result+=input_buffer;
                             }
                         }
                         return result;
@@ -403,7 +404,7 @@ void setup() {
     power.lcd_voltage(3.0);
 #endif
     // init the main screen
-    main_screen.dimensions({320, 240});
+    main_screen.dimensions((ssize16)screen_dimensions);
     main_screen.background_color(color_t::black);
     // initialize the controls
     srect16 sr(0, 0, main_screen.dimensions().width / 2,
