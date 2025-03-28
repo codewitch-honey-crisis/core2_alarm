@@ -31,10 +31,12 @@
 #define OPENSANS_REGULAR_IMPLEMENTATION
 #include "assets/OpenSans_Regular.h"  // our font
 #include "config.h"
+
 // namespace imports
 using namespace arduino;  // devices
 using namespace gfx;      // graphics
 using namespace uix;      // user interface
+
 using color_t = color<rgb_pixel<16>>; // screen color
 using color32_t = color<rgba_pixel<32>>; // UIX color
 
