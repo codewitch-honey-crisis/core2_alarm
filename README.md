@@ -36,9 +36,9 @@ Query string parameters:
 - `a` = zero based alarm index) ex: `a=1` (only honored when `set` is specified)
 - `set` = the presence of this parameter indicates that all `a` values be set, and any not present be cleared.
 
-Example: `http://192.168.50.14?a=1&set`
+Example: `http://192.168.50.14?a=0&a=2&set`
 
 Where the IP is replaced with the local network IP of the Core2
 
-This will set all the fire alarms to off except #2 (zero based index of 1)
+This will set all the fire alarms to off except #1 (zero based index of 0) and #3 (index 2)
 
