@@ -238,11 +238,9 @@ static bool sd_init() {
     slot_config.gpio_cd = SDSPI_SLOT_NO_CD;
     slot_config.gpio_wp = SDSPI_SLOT_NO_WP;
     slot_config.gpio_int = GPIO_NUM_NC;
-    esp_err_t ret;
     if (ESP_OK !=
-        (ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config,
-                                       &mount_config, &card))) {
-        puts(esp_err_to_name(ret));
+        esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config,
+                                       &mount_config, &card)) {
         return false;
     }
     return true;
