@@ -35,17 +35,19 @@
 using namespace arduino;  // devices
 using namespace gfx;      // graphics
 using namespace uix;      // user interface
-using color_t = color<rgb_pixel<16>>;
-using color32_t = color<rgba_pixel<32>>;
+using color_t = color<rgb_pixel<16>>; // screen color
+using color32_t = color<rgba_pixel<32>>; // UIX color
 
+// fonts load from streams, so wrap our array in one
 static const_buffer_stream font_stream(OpenSans_Regular,
                                        sizeof(OpenSans_Regular));
 static tt_font text_font(font_stream, 20, font_size_units::px);
 #ifndef NO_WIFI
-
+// the format for each fire alarm input tag in the web page
 static constexpr const char* html_input_format =                       \
     "            <label>%d</label><input name=\"a\" type=\"checkbox\" " \
     "value=\"%d\" %s/><br />\n";
+// the web server
 AsyncWebServer httpd(80);
 #endif
 #ifdef M5STACK_CORE2
@@ -54,8 +56,8 @@ using power_t = m5core2_power;
 static power_t power(esp_i2c<1, 21, 22>::instance);
 #endif
 
-// for the touch panel
 #ifdef M5STACK_CORE2
+// for the touch panel
 using touch_t = ft6336<320, 280>;
 static touch_t touch(esp_i2c<1, 21, 22>::instance);
 #endif
@@ -84,7 +86,7 @@ static void lcd_on_flush(const rect16& bounds, const void* bmp, void* state) {
     int x1 = bounds.x1, y1 = bounds.y1, x2 = bounds.x2 + 1, y2 = bounds.y2 + 1;
     esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2, y2, (void*)bmp);
 }
-
+#ifdef M5STACK_CORE2
 // for the touch panel
 static void lcd_on_touch(point16* out_locations, size_t* in_out_locations_size,
                          void* state) {
@@ -102,6 +104,7 @@ static void lcd_on_touch(point16* out_locations, size_t* in_out_locations_size,
         }
     }
 }
+#endif
 static void spi_init() {
     spi_bus_config_t buscfg;
     memset(&buscfg, 0, sizeof(buscfg));
@@ -172,9 +175,11 @@ static void lcd_init() {
     lcd.buffer1(lcd_transfer_buffer1);
     lcd.buffer2(lcd_transfer_buffer2);
     lcd.on_flush_callback(lcd_on_flush);
+#ifdef M5STACK_CORE2
     lcd.on_touch_callback(lcd_on_touch);
     touch.initialize();
     touch.rotation(0);
+#endif
 }
 
 using button_t = vbutton<screen_t::control_surface_type>;
@@ -569,5 +574,7 @@ void loop() {
 #endif
     // update the display and touch device
     lcd.update();
+#ifdef M5STACK_CORE2
     touch.update();
+#endif
 }
