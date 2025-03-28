@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
-    <head><title>Alarm Control Panel</title></head>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Alarm Control Panel</title></head>
     <body>
         <form method="get" action=".">
 %ALARMS%
