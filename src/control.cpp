@@ -156,8 +156,6 @@ static void lcd_init() {
 
     // Initialize LCD panel
     esp_lcd_panel_init(lcd_handle);
-    // esp_lcd_panel_io_tx_param(io_handle, LCD_CMD_SLPOUT, NULL, 0);
-    //  Swap x and y axis (Different LCD screens may need different options)
     esp_lcd_panel_swap_xy(lcd_handle, false);
     esp_lcd_panel_set_gap(lcd_handle, 0, 0);
     esp_lcd_panel_mirror(lcd_handle, false, false);
