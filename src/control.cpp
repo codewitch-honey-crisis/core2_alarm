@@ -258,7 +258,7 @@ static void www_init() {
             }
         }
         request->send(SPIFFS, "/index.thtml", "text/html", false,
-                      [](const String& var) -> String {
+                    [](const String& var) -> String {
                         String result;
                         char www_input_buffer[256];
                         if (var == "ALARMS") {
@@ -270,7 +270,7 @@ static void www_init() {
                             }
                         }
                         return result;
-                      });
+                    });
     });
     httpd.on("/api", HTTP_GET, [](AsyncWebServerRequest* request) {
         bool values[alarm_count];
@@ -291,7 +291,7 @@ static void www_init() {
             }
         }
         request->send(SPIFFS, "/api.tjson", "application/json", false,
-                      [](const String& var) -> String {
+                    [](const String& var) -> String {
                         String result;  
                         if (var == "ALARMS") {
                             for (int i = 0; i < alarm_count; ++i) {
@@ -306,7 +306,7 @@ static void www_init() {
                             }
                         }
                         return result;
-                      });
+                    });
     });
     httpd.begin();
 }
