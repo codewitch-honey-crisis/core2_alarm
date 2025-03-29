@@ -4,6 +4,7 @@
 #ifdef M5STACK_CORE2
 #include <esp_i2c.hpp>        // i2c initialization
 #include <m5core2_power.hpp>  // AXP192 power management (core2)
+#include <ft6336.hpp>
 #endif
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
@@ -20,9 +21,6 @@
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <sdmmc_cmd.h>
-#endif
-#ifdef M5STACK_CORE2
-#include <ft6336.hpp>
 #endif
 #include <gfx.hpp>  // graphics library
 #include <uix.hpp>  // user interface library
