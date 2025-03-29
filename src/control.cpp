@@ -208,13 +208,13 @@ static void lcd_init() {
 #ifndef NO_WIFI
 static sdmmc_card_t* card = nullptr;
 static bool sd_init() {
+    static const char mount_point[] = "/sdcard";
     esp_vfs_fat_sdmmc_mount_config_t mount_config;
     memset(&mount_config, 0, sizeof(mount_config));
     mount_config.format_if_mount_failed = false;
     mount_config.max_files = 5;
     mount_config.allocation_unit_size = 0;
 
-    static const char mount_point[] = "/sdcard";
     sdmmc_host_t host;
     memset(&host, 0, sizeof(host));
 
