@@ -51,12 +51,25 @@ static constexpr const char* html_input_format =                       \
 AsyncWebServer httpd(80);
 #endif
 #ifdef M5STACK_CORE2
+
+// for the spi 
+static constexpr const struct {
+    int8_t mosi, miso, sck;
+} spi_pins = {23,38,18};
+
+// for the LCD
+static constexpr const struct {
+    int8_t cs,dc,rst, bl;
+} lcd_pins = {5,15,-1,-1};
+
+static constexpr const uint32_t lcd_pclk = 40 * 1000 * 1000;
+
+static constexpr const bool lcd_bl_low = false;
+
 using power_t = m5core2_power;
 // for AXP192 power management
 static power_t power(esp_i2c<1, 21, 22>::instance);
-#endif
 
-#ifdef M5STACK_CORE2
 // for the touch panel
 using touch_t = ft6336<320, 280>;
 static touch_t touch(esp_i2c<1, 21, 22>::instance);
@@ -126,9 +139,9 @@ static void lcd_on_touch(point16* out_locations, size_t* in_out_locations_size,
 static void spi_init() {
     spi_bus_config_t buscfg;
     memset(&buscfg, 0, sizeof(buscfg));
-    buscfg.sclk_io_num = 18;
-    buscfg.mosi_io_num = 23;
-    buscfg.miso_io_num = 38;
+    buscfg.sclk_io_num = spi_pins.sck;
+    buscfg.mosi_io_num = spi_pins.mosi;
+    buscfg.miso_io_num = spi_pins.miso;
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
     buscfg.max_transfer_sz =
@@ -147,13 +160,16 @@ static void lcd_init() {
         puts("Out of memory allocating transfer buffers");
         while (1) vTaskDelay(5);
     }
-
+    if(lcd_pins.bl>-1) {
+        gpio_set_direction((gpio_num_t)lcd_pins.bl,GPIO_MODE_OUTPUT);
+        gpio_set_level((gpio_num_t)lcd_pins.bl,lcd_bl_low);
+    }
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_spi_config_t io_config;
     memset(&io_config, 0, sizeof(io_config));
-    io_config.dc_gpio_num = 15;
-    io_config.cs_gpio_num = 5;
-    io_config.pclk_hz = 40 * 1000 * 1000;
+    io_config.dc_gpio_num = lcd_pins.dc;
+    io_config.cs_gpio_num = lcd_pins.cs;
+    io_config.pclk_hz = lcd_pclk;
     io_config.lcd_cmd_bits = 8;
     io_config.lcd_param_bits = 8;
     io_config.spi_mode = 0;
@@ -166,7 +182,7 @@ static void lcd_init() {
     lcd_handle = NULL;
     esp_lcd_panel_dev_config_t lcd_config;
     memset(&lcd_config, 0, sizeof(lcd_config));
-    lcd_config.reset_gpio_num = -1;
+    lcd_config.reset_gpio_num = lcd_pins.rst;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     lcd_config.rgb_endian = LCD_RGB_ENDIAN_BGR;
 #else
@@ -192,6 +208,9 @@ static void lcd_init() {
 #else
     esp_lcd_panel_disp_off(lcd_handle, false);
 #endif
+    if(lcd_pins.bl>-1) {
+        gpio_set_level((gpio_num_t)lcd_pins.bl,!lcd_bl_low);
+    }
     lcd.buffer_size(lcd_transfer_buffer_size);
     lcd.buffer1(lcd_transfer_buffer1);
     lcd.buffer2(lcd_transfer_buffer2);
