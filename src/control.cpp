@@ -48,7 +48,7 @@ static constexpr const char* html_input_format =                       \
     "            <label>%d</label><input name=\"a\" type=\"checkbox\" " \
     "value=\"%d\" %s/><br />\n";
 // the web server
-AsyncWebServer httpd(80);
+static AsyncWebServer httpd(80);
 #endif
 #ifdef M5STACK_CORE2
 
@@ -86,6 +86,7 @@ static uix::display lcd;
 using button_t = vbutton<screen_t::control_surface_type>;
 using switch_t = vswitch<screen_t::control_surface_type>;
 using label_t = label<screen_t::control_surface_type>;
+using qr_t = qrcode<screen_t::control_surface_type>;
 
 // the screen/control definitions
 static screen_t main_screen;
@@ -97,7 +98,6 @@ static label_t switch_labels[switches_count];
 static char switch_text[switches_count][4];
 
 static screen_t qr_screen;
-using qr_t = qrcode<screen_t::control_surface_type>;
 static qr_t qr_link;
 static button_t qr_return;
 
