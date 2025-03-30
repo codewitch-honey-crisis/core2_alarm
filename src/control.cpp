@@ -102,7 +102,10 @@ static qr_t qr_link;
 static button_t qr_return;
 
 static esp_lcd_panel_handle_t lcd_handle;
-static constexpr const size_t lcd_transfer_buffer_size = screen_dimensions.width * screen_dimensions.height * ((screen_t::pixel_type::bit_depth+7)/8) / 10;
+static constexpr const size_t lcd_transfer_buffer_size = 
+                                            screen_dimensions.width * 
+                                            screen_dimensions.height * 
+                                            ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 // the transfer buffers
 static uint8_t* lcd_transfer_buffer1 = nullptr;
 static uint8_t* lcd_transfer_buffer2 = nullptr;
