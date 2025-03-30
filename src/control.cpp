@@ -77,19 +77,17 @@ static power_t power(esp_i2c<1, 21, 22>::instance);
 // for the touch panel
 using touch_t = ft6336<320, 280>;
 static touch_t touch(esp_i2c<1, 21, 22>::instance);
-
-
 #endif
 
-
 using screen_t = uix::screen<rgb_pixel<16>>;
+using surface_t = screen_t::control_surface_type;
 
 static uix::display lcd;
 
-using button_t = vbutton<screen_t::control_surface_type>;
-using switch_t = vswitch<screen_t::control_surface_type>;
-using label_t = label<screen_t::control_surface_type>;
-using qr_t = qrcode<screen_t::control_surface_type>;
+using button_t = vbutton<surface_t>;
+using switch_t = vswitch<surface_t>;
+using label_t = label<surface_t>;
+using qr_t = qrcode<surface_t>;
 
 // the screen/control definitions
 static screen_t main_screen;
