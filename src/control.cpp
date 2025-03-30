@@ -68,6 +68,8 @@ static constexpr const bool lcd_bl_low = false;
 
 static constexpr const int8_t sd_cs = 4;
 
+static constexpr const size16 lcd_dimensions(320,240);
+
 using power_t = m5core2_power;
 // for AXP192 power management
 static power_t power(esp_i2c<1, 21, 22>::instance);
@@ -75,9 +77,10 @@ static power_t power(esp_i2c<1, 21, 22>::instance);
 // for the touch panel
 using touch_t = ft6336<320, 280>;
 static touch_t touch(esp_i2c<1, 21, 22>::instance);
+
+
 #endif
 
-static constexpr const size16 screen_dimensions(320,240);
 
 using screen_t = uix::screen<rgb_pixel<16>>;
 
@@ -103,8 +106,8 @@ static button_t qr_return;
 
 static esp_lcd_panel_handle_t lcd_handle = nullptr;
 static constexpr const size_t lcd_transfer_buffer_size = 
-                                            screen_dimensions.width * 
-                                            screen_dimensions.height * 
+                                            lcd_dimensions.width * 
+                                            lcd_dimensions.height * 
                                             ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 // the transfer buffers
 static uint8_t* lcd_transfer_buffer1 = nullptr;
@@ -433,7 +436,7 @@ void setup() {
     power.lcd_voltage(3.0);
 #endif
     // init the main screen
-    main_screen.dimensions((ssize16)screen_dimensions);
+    main_screen.dimensions((ssize16)lcd_dimensions);
     main_screen.background_color(color_t::black);
     // initialize the controls
     srect16 sr(0, 0, main_screen.dimensions().width / 2,
