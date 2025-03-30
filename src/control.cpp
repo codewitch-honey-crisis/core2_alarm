@@ -101,7 +101,7 @@ static screen_t qr_screen;
 static qr_t qr_link;
 static button_t qr_return;
 
-static esp_lcd_panel_handle_t lcd_handle;
+static esp_lcd_panel_handle_t lcd_handle = nullptr;
 static constexpr const size_t lcd_transfer_buffer_size = 
                                             screen_dimensions.width * 
                                             screen_dimensions.height * 
