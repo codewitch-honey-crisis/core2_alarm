@@ -151,7 +151,7 @@ static void spi_init() {
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
     buscfg.max_transfer_sz =
-        gfx::math::max(lcd_transfer_buffer_size, (size_t)(16 * 1024)) + 8;
+        gfx::math::max(lcd_transfer_buffer_size, (size_t)(512)) + 8;
     // Initialize the SPI bus on VSPI (SPI3)
     spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO);
 }
