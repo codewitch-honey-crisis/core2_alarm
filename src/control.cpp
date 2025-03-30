@@ -66,6 +66,8 @@ static constexpr const uint32_t lcd_pclk = 40 * 1000 * 1000;
 
 static constexpr const bool lcd_bl_low = false;
 
+static constexpr const int8_t sd_cs = 4;
+
 using power_t = m5core2_power;
 // for AXP192 power management
 static power_t power(esp_i2c<1, 21, 22>::instance);
@@ -255,7 +257,7 @@ static bool sd_init() {
     sdspi_device_config_t slot_config;
     memset(&slot_config, 0, sizeof(slot_config));
     slot_config.host_id = (spi_host_device_t)host.slot;
-    slot_config.gpio_cs = (gpio_num_t)4;
+    slot_config.gpio_cs = (gpio_num_t)sd_cs;
     slot_config.gpio_cd = SDSPI_SLOT_NO_CD;
     slot_config.gpio_wp = SDSPI_SLOT_NO_WP;
     slot_config.gpio_int = GPIO_NUM_NC;
