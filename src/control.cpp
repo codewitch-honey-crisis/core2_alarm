@@ -41,7 +41,7 @@ using color32_t = color<rgba_pixel<32>>; // UIX color
 // fonts load from streams, so wrap our array in one
 static const_buffer_stream font_stream(OpenSans_Regular,
                                        sizeof(OpenSans_Regular));
-static tt_font text_font(font_stream, 20, font_size_units::px);
+static tt_font text_font;
 #ifndef NO_WIFI
 // the format for each fire alarm input tag in the web page
 static constexpr const char* html_input_format =                       \
@@ -66,9 +66,9 @@ static constexpr const uint32_t lcd_pclk = 40 * 1000 * 1000;
 
 static constexpr const bool lcd_bl_low = false;
 
-static constexpr const int8_t sd_cs = 4;
-
 static constexpr const size16 lcd_dimensions(320,240);
+
+static constexpr const int8_t sd_cs = 4;
 
 using power_t = m5core2_power;
 // for AXP192 power management
