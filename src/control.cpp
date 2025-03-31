@@ -229,7 +229,7 @@ static void lcd_init() {
 }
 
 #ifndef NO_WIFI
-static sdmmc_card_t* card = nullptr;
+static sdmmc_card_t* sd_card = nullptr;
 static bool sd_init() {
     static const char mount_point[] = "/sdcard";
     esp_vfs_fat_sdmmc_mount_config_t mount_config;
@@ -267,7 +267,7 @@ static bool sd_init() {
     slot_config.gpio_int = GPIO_NUM_NC;
     if (ESP_OK !=
         esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config,
-                                       &mount_config, &card)) {
+                                       &mount_config, &sd_card)) {
         return false;
     }
     return true;
