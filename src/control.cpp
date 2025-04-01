@@ -4,7 +4,7 @@
 #ifdef M5STACK_CORE2
 #include <esp_i2c.hpp>        // i2c initialization
 #include <m5core2_power.hpp>  // AXP192 power management (core2)
-#include <ft6336.hpp>
+#include <ft6336.hpp>         // touch screen panel
 #endif
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
