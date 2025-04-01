@@ -240,7 +240,6 @@ static bool sd_init() {
 
     sdmmc_host_t host;
     memset(&host, 0, sizeof(host));
-
     host.flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG;
     host.slot = SPI3_HOST;
     host.max_freq_khz = SDMMC_FREQ_DEFAULT;
