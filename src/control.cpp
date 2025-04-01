@@ -51,7 +51,6 @@ static constexpr const char* html_input_format =                       \
 static AsyncWebServer httpd(80);
 #endif
 #ifdef M5STACK_CORE2
-
 // for the spi 
 static constexpr const struct {
     int8_t mosi, miso, sck;
@@ -61,11 +60,8 @@ static constexpr const struct {
 static constexpr const struct {
     int8_t cs,dc,rst, bl;
 } lcd_pins = {5,15,-1,-1};
-
 static constexpr const uint32_t lcd_pclk = 40 * 1000 * 1000;
-
 static constexpr const bool lcd_bl_low = false;
-
 static constexpr const size16 lcd_dimensions(320,240);
 
 static constexpr const int8_t sd_cs = 4;
