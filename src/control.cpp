@@ -28,7 +28,7 @@
 // converted to a header with https://honeythecodewitch.com/gfx/converter
 #define OPENSANS_REGULAR_IMPLEMENTATION
 #include "assets/OpenSans_Regular.h"  // our font
-#include "config.h"
+#include "config.h"                   // fire alarm config
 
 // namespace imports
 using namespace arduino;  // devices
