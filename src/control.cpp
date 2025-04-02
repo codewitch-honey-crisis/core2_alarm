@@ -43,6 +43,7 @@ static const_buffer_stream font_stream(OpenSans_Regular,
                                        sizeof(OpenSans_Regular));
 static tt_font text_font;
 #ifndef NO_WIFI
+static SemaphoreHandle_t httpd_sync = nullptr;
 // the format for each fire alarm input tag in the web page
 static constexpr const char* html_input_format =                       \
     "            <label>%d</label><input name=\"a\" type=\"checkbox\" " \
@@ -268,6 +269,13 @@ static bool sd_init() {
     return true;
 }
 static void www_init() {
+    if(httpd_sync==nullptr) {
+        httpd_sync = xSemaphoreCreateMutex();
+        if(httpd_sync==nullptr) {
+            puts("Unable to allocate web server semaphore");
+            while(1) vTaskDelay(5);
+        }
+    }
     httpd.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
         const size_t params = request->params();
         bool values[alarm_count];
@@ -282,9 +290,11 @@ static void www_init() {
                     }
                 }
             }
+            xSemaphoreTake(httpd_sync,portMAX_DELAY);
             for (size_t i = 0; i < alarm_count; ++i) {
                 switches[i].value(values[i]);
             }
+            xSemaphoreGive(httpd_sync);
         }
         request->send(SPIFFS, "/index.thtml", "text/html", false,
                     [](const String& var) -> String {
@@ -292,12 +302,14 @@ static void www_init() {
                         result.reserve(4096);
                         char input_buffer[256];
                         if (var == "ALARMS") {
+                            xSemaphoreTake(httpd_sync,portMAX_DELAY);
                             for (int i = 0; i < alarm_count; ++i) {
                                 const bool checked = switches[i].value();
                                 snprintf(input_buffer,sizeof(input_buffer), html_input_format,
                                         i + 1, i, checked ? "checked" : "");
                                 result+=input_buffer;
                             }
+                            xSemaphoreGive(httpd_sync);
                         }
                         return result;
                     });
@@ -316,15 +328,18 @@ static void www_init() {
                     }
                 }
             }
+            xSemaphoreTake(httpd_sync,portMAX_DELAY);
             for (size_t i = 0; i < alarm_count; ++i) {
                 switches[i].value(values[i]);
             }
+            xSemaphoreGive(httpd_sync);
         }
         request->send(SPIFFS, "/api.tjson", "application/json", false,
                     [](const String& var) -> String {
                         String result;  
                         result.reserve(2048);
                         if (var == "ALARMS") {
+                            xSemaphoreTake(httpd_sync,portMAX_DELAY);
                             for (int i = 0; i < alarm_count; ++i) {
                                 if (i > 0) {
                                     result+=", ";
@@ -335,6 +350,7 @@ static void www_init() {
                                 result+=
                                         checked ? "true" : "false";
                             }
+                            xSemaphoreGive(httpd_sync);
                         }
                         return result;
                     });
@@ -595,9 +611,17 @@ void loop() {
             WiFi.disconnect(true);
         }
     }
+    if(httpd_sync!=nullptr) {
+        xSemaphoreTake(httpd_sync,portMAX_DELAY);
+    }
 #endif
     // update the display and touch device
     lcd.update();
+#ifndef NO_WIFI
+    if(httpd_sync!=nullptr) {
+        xSemaphoreGive(httpd_sync);
+    }
+#endif
 #ifdef M5STACK_CORE2
     touch.update();
 #endif
