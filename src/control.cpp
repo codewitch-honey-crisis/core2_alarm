@@ -397,6 +397,7 @@ void setup() {
     SPIFFS.begin(); // <-- even if we don't need it below, we need it later for the web requests
     // check SPIFFS for /wifi.txt if the SD wasn't present or didn't have it.
     if (!loaded) {
+        puts("Looking for wifi.txt creds on internal flash");
         if (SPIFFS.exists("/wifi.txt")) {
             File file = SPIFFS.open("/wifi.txt", "r");
             // parse the file
@@ -420,6 +421,8 @@ void setup() {
         WiFi.mode(WIFI_STA);
         WiFi.disconnect();
         WiFi.begin(ssid, pass);
+    } else {
+        puts("wifi.txt not found - network features unavailable");
     }
 #endif
     // initialize the display
