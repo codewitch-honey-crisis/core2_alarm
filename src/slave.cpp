@@ -10,6 +10,10 @@ void setup() {
 #else
     Serial2.begin(serial_baud_rate);
 #endif
+    for(size_t i = 0;i<alarm_count; ++i) {
+        pinMode(alarm_switch_pins[i],INPUT);
+        pinMode(alarm_enable_pins[i],OUTPUT);
+    }
 }
 void loop() {
     uint8_t payload[2];
