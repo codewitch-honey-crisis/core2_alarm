@@ -79,6 +79,10 @@ static touch_t touch(esp_i2c<1, 21, 22>::instance);
 using screen_t = uix::screen<rgb_pixel<16>>;
 using surface_t = screen_t::control_surface_type;
 
+static constexpr const size_t lcd_transfer_buffer_size = 
+                                            lcd_dimensions.width * 
+                                            lcd_dimensions.height * 
+                                            ((screen_t::pixel_type::bit_depth+7)/8) / 10;
 static uix::display lcd;
 
 using button_t = vbutton<surface_t>;
@@ -99,15 +103,6 @@ static screen_t qr_screen;
 static qr_t qr_link;
 static button_t qr_return;
 
-static esp_lcd_panel_handle_t lcd_handle = nullptr;
-static constexpr const size_t lcd_transfer_buffer_size = 
-                                            lcd_dimensions.width * 
-                                            lcd_dimensions.height * 
-                                            ((screen_t::pixel_type::bit_depth+7)/8) / 10;
-// the transfer buffers
-static uint8_t* lcd_transfer_buffer1 = nullptr;
-static uint8_t* lcd_transfer_buffer2 = nullptr;
-
 // tell UIX the DMA transfer is complete
 static bool lcd_flush_ready(esp_lcd_panel_io_handle_t lcd_io,
                             esp_lcd_panel_io_event_data_t* edata,
@@ -118,7 +113,7 @@ static bool lcd_flush_ready(esp_lcd_panel_io_handle_t lcd_io,
 // tell the lcd panel api to transfer data via DMA
 static void lcd_on_flush(const rect16& bounds, const void* bmp, void* state) {
     int x1 = bounds.x1, y1 = bounds.y1, x2 = bounds.x2 + 1, y2 = bounds.y2 + 1;
-    esp_lcd_panel_draw_bitmap(lcd_handle, x1, y1, x2, y2, (void*)bmp);
+    esp_lcd_panel_draw_bitmap((esp_lcd_panel_handle_t)state, x1, y1, x2, y2, (void*)bmp);
 }
 #ifdef M5STACK_CORE2
 // for the touch panel
@@ -155,6 +150,10 @@ static void spi_init() {
 
 // initialize the screen using the esp panel API
 static void lcd_init() {
+    // the transfer buffers
+    uint8_t* lcd_transfer_buffer1 = nullptr;
+    uint8_t* lcd_transfer_buffer2 = nullptr;
+
     lcd_transfer_buffer1 =
         (uint8_t*)heap_caps_malloc(lcd_transfer_buffer_size, MALLOC_CAP_DMA);
     lcd_transfer_buffer2 =
@@ -182,7 +181,6 @@ static void lcd_init() {
     esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI3_HOST, &io_config,
                              &io_handle);
 
-    lcd_handle = NULL;
     esp_lcd_panel_dev_config_t lcd_config;
     memset(&lcd_config, 0, sizeof(lcd_config));
     lcd_config.reset_gpio_num = lcd_pins.rst;
@@ -192,6 +190,7 @@ static void lcd_init() {
     lcd_config.color_space = ESP_LCD_COLOR_SPACE_BGR;
 #endif
     lcd_config.bits_per_pixel = 16;
+    esp_lcd_panel_handle_t lcd_handle = nullptr;
 
     // Initialize the LCD configuration
     esp_lcd_new_panel_ili9342(io_handle, &lcd_config, &lcd_handle);
@@ -217,7 +216,7 @@ static void lcd_init() {
     lcd.buffer_size(lcd_transfer_buffer_size);
     lcd.buffer1(lcd_transfer_buffer1);
     lcd.buffer2(lcd_transfer_buffer2);
-    lcd.on_flush_callback(lcd_on_flush);
+    lcd.on_flush_callback(lcd_on_flush,lcd_handle);
 #ifdef M5STACK_CORE2
     lcd.on_touch_callback(lcd_on_touch);
     touch.initialize();
