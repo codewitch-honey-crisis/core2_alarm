@@ -43,6 +43,10 @@ static const_buffer_stream font_stream(OpenSans_Regular,
                                        sizeof(OpenSans_Regular));
 static tt_font text_font;
 #ifndef NO_WIFI
+// when incoming web requests come in we need to be careful not to update 
+// the controls from two places at once like from two web requests,
+// or from the user manipulating the UI while a web request is
+// in progress. This makes sure that doesn't happen
 static SemaphoreHandle_t httpd_sync = nullptr;
 // the format for each fire alarm input tag in the web page
 static constexpr const char* html_input_format =                       \
