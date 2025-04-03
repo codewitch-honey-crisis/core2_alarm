@@ -267,7 +267,7 @@ static bool sd_init() {
     }
     return true;
 }
-static void www_init() {
+static void httpd_init() {
     if(httpd_sync==nullptr) {
         httpd_sync = xSemaphoreCreateMutex();
         if(httpd_sync==nullptr) {
@@ -582,7 +582,7 @@ void loop() {
         if (WiFi.status() == WL_CONNECTED) {
             puts("Connected");
             // initialize the web server
-            www_init();
+            httpd_init();
             // move the "Reset all" button to the left
             const int16_t diff = -reset_all.bounds().x1;
             reset_all.bounds(reset_all.bounds().offset(diff, 0));
