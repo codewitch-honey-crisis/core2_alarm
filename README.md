@@ -8,7 +8,7 @@
 
 3. Configure include/config.h for the count of alarms and all the associated pins
 
-4. Upload Filesystem Image to control
+4. Upload Filesystem Image to control (only necessary for Arduino or if using wifi.txt in SPIFFS)
 
 5. Upload Firmware to control
 
@@ -46,3 +46,4 @@ Where the IP is replaced with the local network IP of the Core2
 
 This will set all the fire alarms to off except #1 (zero based index of 0) and #3 (index 2)
 
+### Note: The ESP-IDF version is slightly better, being a bit more elegant in terms of handling lots of alarms, plus being generally more efficient.
