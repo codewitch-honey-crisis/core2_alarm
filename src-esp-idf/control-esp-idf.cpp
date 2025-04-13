@@ -205,9 +205,11 @@ static void alarm_enable(size_t alarm, bool on) {
 
 static uix::display lcd;
 
-static constexpr const EventBits_t WIFI_CONNECTED_BIT = BIT0;
-static constexpr const EventBits_t WIFI_FAIL_BIT = BIT1;
+static constexpr const EventBits_t wifi_connected_bit = BIT0;
+static constexpr const EventBits_t wifi_fail_bit = BIT1;
 static EventGroupHandle_t wifi_event_group = NULL;
+static char wifi_ssid[65];
+static char wifi_pass[129];
 static esp_ip4_addr_t wifi_ip;
 
 static void serial_init() {
@@ -255,14 +257,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
             ++wifi_retry_count;
         } else {
             puts("wifi connection failed");
-            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(wifi_event_group, wifi_fail_bit);
         }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         puts("got IP address");
         wifi_retry_count = 0;
         ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
         memcpy(&wifi_ip, &event->ip_info.ip, sizeof(wifi_ip));
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(wifi_event_group, wifi_connected_bit);
     }
 }
 static bool wifi_load(FILE* file, char* ssid, char* pass) {
@@ -320,10 +322,10 @@ static WIFI_STATUS wifi_status() {
         return WIFI_WAITING;
     }
     EventBits_t bits = xEventGroupGetBits(wifi_event_group) &
-                       (WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
-    if (bits == WIFI_CONNECTED_BIT) {
+                       (wifi_connected_bit | wifi_fail_bit);
+    if (bits == wifi_connected_bit) {
         return WIFI_CONNECTED;
-    } else if (bits == WIFI_FAIL_BIT) {
+    } else if (bits == wifi_fail_bit) {
         return WIFI_CONNECT_FAILED;
     }
     return WIFI_WAITING;
@@ -495,6 +497,9 @@ static void httpd_init() {
     ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle,&handler));
 }
 static void httpd_end() {
+    if(httpd_handle==nullptr) {
+        return;
+    }
     ESP_ERROR_CHECK(httpd_stop(httpd_handle));
     httpd_handle = nullptr;
     vSemaphoreDelete(httpd_ui_sync);
@@ -804,14 +809,14 @@ extern "C" void app_main() {
     memset(alarm_values, 0, sizeof(alarm_values));
     serial_init();
     bool loaded = false;
-    char ssid[65];
-    ssid[0] = 0;
-    char pass[129];
-    pass[0] = 0;
+    
+    wifi_ssid[0] = 0;
+    
+    wifi_pass[0] = 0;
     if (sd_init()) {
         puts("SD card found, looking for wifi.txt creds");
         FILE* file = fopen("/sdcard/wifi.txt", "r");
-        loaded = wifi_load(file,ssid,pass);
+        loaded = wifi_load(file,wifi_ssid,wifi_pass);
         if(file!=nullptr) {
             fclose(file);
         }
@@ -819,14 +824,14 @@ extern "C" void app_main() {
     if (!loaded) {
         puts("Looking for wifi.txt creds on internal flash");
         FILE* file = fopen("/spiffs/wifi.txt", "r");
-        loaded = wifi_load(file, ssid, pass);
+        loaded = wifi_load(file, wifi_ssid, wifi_pass);
         if (file != nullptr) {
             fclose(file);
         }
     }
     if (loaded) {
-        printf("Initializing WiFi connection to %s\n", ssid);
-        wifi_init(ssid, pass);
+        printf("Initializing WiFi connection to %s\n", wifi_ssid);
+        wifi_init(wifi_ssid, wifi_pass);
     }
     main_screen.dimensions({LCD_WIDTH, LCD_HEIGHT});
     main_screen.background_color(color_t::black);
@@ -917,7 +922,6 @@ extern "C" void app_main() {
     sr = srect16(0, 0, main_screen.dimensions().width / 8,
                  main_screen.dimensions().height / 3);
     const uint16_t swidth = math::max(area.width, (uint16_t)sr.width());
-    // const uint16_t sheight = area.height + sr.height() + 2;
     const uint16_t total_width = swidth * switches_count;
     const uint16_t xofs = (main_screen.dimensions().width - total_width) / 2;
     const uint16_t yofs = main_screen.dimensions().height / 12;
@@ -1040,7 +1044,7 @@ static void loop() {
             reset_all.bounds(
                 reset_all.bounds().center_horizontal(main_screen.bounds()));
             httpd_end();
-            // WiFi.disconnect(true);
+            esp_wifi_start();
         }
     }
 }
