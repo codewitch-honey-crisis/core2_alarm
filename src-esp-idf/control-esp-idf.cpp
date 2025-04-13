@@ -993,6 +993,7 @@ extern "C" void app_main() {
     lcd.active_screen(main_screen);
     TaskHandle_t loop_handle;
     xTaskCreate(loop_task, "loop_task", 4096, nullptr, 10, &loop_handle);
+    printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
 }
 static void loop() {
     // update the display and touch device
@@ -1030,6 +1031,7 @@ static void loop() {
             qr_link.text(qr_text);
             // now show the link
             web_link.visible(true);
+            printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
         }
     } else {
         if (wifi_status() == WIFI_CONNECT_FAILED) {
@@ -1045,6 +1047,7 @@ static void loop() {
                 reset_all.bounds().center_horizontal(main_screen.bounds()));
             httpd_end();
             esp_wifi_start();
+            printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
         }
     }
 }
