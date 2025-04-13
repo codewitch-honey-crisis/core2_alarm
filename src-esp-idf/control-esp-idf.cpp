@@ -330,17 +330,17 @@ static WIFI_STATUS wifi_status() {
 }
 static httpd_handle_t httpd_handle = nullptr;
 static SemaphoreHandle_t httpd_ui_sync = nullptr;
-#define HTTPD_PAGE_HEADER      "HTTP/1.1 200 OK\r\n"                   \
+static const char* httpd_page_header =      "HTTP/1.1 200 OK\r\n"                   \
                            "Content-Type: text/html\r\n"           \
-                           "Transfer-Encoding: chunked\r\n\r\n"
-#define HTTPD_PAGE_PROLOGUE "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" /><title>Alarm Control Panel</title></head><body><form method=\"get\" action=\".\">"
-#define HTTPD_PAGE_ALARM_FORMAT "<label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/><br />"
-#define HTTPD_PAGE_EPILOGUE "<input type=\"submit\" name=\"set\" value=\"write\"/><input type=\"submit\" name=\"refresh\" value=\"read\"/></form></body></html>"
-#define HTTPD_API_HEADER      "HTTP/1.1 200 OK\r\n"                   \
+                           "Transfer-Encoding: chunked\r\n\r\n";
+static const char* httpd_page_prologue = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" /><title>Alarm Control Panel</title></head><body><form method=\"get\" action=\".\">";
+static const char*  httpd_page_input_format ="<label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/><br />";
+static const char*  httpd_page_epilogue ="<input type=\"submit\" name=\"set\" value=\"write\"/><input type=\"submit\" name=\"refresh\" value=\"read\"/></form></body></html>";
+static const char*  httpd_api_header =     "HTTP/1.1 200 OK\r\n"                   \
                            "Content-Type: application/json\r\n"           \
-                           "Transfer-Encoding: chunked\r\n\r\n"
-#define HTTPD_API_PROLOGUE "{\"status\":["
-#define HTTPD_API_EPILOGUE "]}"
+                           "Transfer-Encoding: chunked\r\n\r\n";
+static const char*  httpd_api_prologue = "{\"status\":[";
+static const char* httpd_api_epilogue = "]}";
 struct httpd_async_resp_arg {
     httpd_handle_t hd;
     int fd;
@@ -419,40 +419,40 @@ static void httpd_parse_url_and_apply_alarms(const char* url) {
     }
 }
 static void httpd_page_async_handler(void* arg) {
-    static const size_t header_len = strlen(HTTPD_PAGE_HEADER);
-    static const size_t prologue_len = strlen(HTTPD_PAGE_PROLOGUE);
-    static const size_t epilogue_len = strlen(HTTPD_PAGE_EPILOGUE);
+    static const size_t header_len = strlen(httpd_page_header);
+    static const size_t prologue_len = strlen(httpd_page_prologue);
+    static const size_t epilogue_len = strlen(httpd_page_epilogue);
     char input_buffer[256];
     httpd_async_resp_arg *resp_arg = (httpd_async_resp_arg *)arg;
     
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, HTTPD_PAGE_HEADER, header_len, 0);
-    httpd_send_chunked(resp_arg,HTTPD_PAGE_PROLOGUE,prologue_len);
+    httpd_socket_send(hd, fd, httpd_page_header, header_len, 0);
+    httpd_send_chunked(resp_arg,httpd_page_prologue,prologue_len);
     for(size_t i = 0; i<alarm_count;++i) {
         const bool checked = alarm_values[i];
-        snprintf(input_buffer,sizeof(input_buffer),HTTPD_PAGE_ALARM_FORMAT,i + 1, i, checked ? "checked" : "");
+        snprintf(input_buffer,sizeof(input_buffer),httpd_page_input_format,i + 1, i, checked ? "checked" : "");
         httpd_send_chunked(resp_arg,input_buffer,strlen(input_buffer));
     }
-    httpd_send_chunked(resp_arg,HTTPD_PAGE_EPILOGUE,epilogue_len);
+    httpd_send_chunked(resp_arg,httpd_page_epilogue,epilogue_len);
     httpd_send_chunked(resp_arg,NULL,0);
     free(arg);
 }
 static void httpd_api_async_handler(void* arg) {
-    static const size_t header_len = strlen(HTTPD_API_HEADER);
-    static const size_t prologue_len = strlen(HTTPD_API_PROLOGUE);
-    static const size_t epilogue_len = strlen(HTTPD_API_EPILOGUE);
+    static const size_t header_len = strlen(httpd_api_header);
+    static const size_t prologue_len = strlen(httpd_api_prologue);
+    static const size_t epilogue_len = strlen(httpd_api_epilogue);
     httpd_async_resp_arg *resp_arg = (httpd_async_resp_arg *)arg;
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, HTTPD_API_HEADER, header_len, 0);
-    httpd_send_chunked(resp_arg,HTTPD_API_PROLOGUE,prologue_len);
+    httpd_socket_send(hd, fd, httpd_api_header, header_len, 0);
+    httpd_send_chunked(resp_arg,httpd_api_prologue,prologue_len);
     for(size_t i = 0; i<alarm_count;++i) {
         const bool checked = alarm_values[i];
         const char* val = (i==0)?(checked?"true":"false"):(checked?",true":",false");
         httpd_send_chunked(resp_arg,val,strlen(val));
     }
-    httpd_send_chunked(resp_arg,HTTPD_API_EPILOGUE,epilogue_len);
+    httpd_send_chunked(resp_arg,httpd_api_epilogue,epilogue_len);
     httpd_send_chunked(resp_arg,NULL,0);
     free(arg);
 }
