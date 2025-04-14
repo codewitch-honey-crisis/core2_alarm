@@ -161,7 +161,7 @@ class arrow_box : public control<ControlSurfaceType> {
         cvs.initialize();
         draw::canvas(dst, cvs);
         m_svg->seek(0);
-        if (gfx_result::success != cvs.render_svg(*m_svg, m_fit, 96.f)) {
+        if (gfx_result::success != cvs.render_svg(*m_svg, m_fit)) {
             puts("SVG render error");
         }
     }
@@ -190,6 +190,7 @@ class arrow_box : public control<ControlSurfaceType> {
         }
     }
 };
+
 static void update_switches(bool lock = true);
 static void serial_send_alarm(size_t i);
 
@@ -248,6 +249,7 @@ static void serial_send_alarm(size_t i) {
     payload[1] = i;
     uart_write_bytes(UART_NUM_1, payload, sizeof(payload));
 }
+
 static size_t wifi_retry_count = 0;
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data) {
@@ -335,6 +337,7 @@ static WIFI_STATUS wifi_status() {
     }
     return WIFI_WAITING;
 }
+
 static httpd_handle_t httpd_handle = nullptr;
 static SemaphoreHandle_t httpd_ui_sync = nullptr;
 struct httpd_async_resp_arg {
@@ -506,6 +509,7 @@ static void httpd_end() {
     vSemaphoreDelete(httpd_ui_sync);
     httpd_ui_sync = nullptr;
 }
+
 static void power_init() {
     // for AXP192 power management
     static m5core2_power power(esp_i2c<1, 21, 22>::instance);
@@ -735,6 +739,7 @@ static bool sd_init() {
     }
     return true;
 }
+
 static void spiffs_init() {
     esp_vfs_spiffs_conf_t conf;
     memset(&conf, 0, sizeof(conf));
