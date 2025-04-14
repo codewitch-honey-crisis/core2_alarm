@@ -337,14 +337,6 @@ static WIFI_STATUS wifi_status() {
 }
 static httpd_handle_t httpd_handle = nullptr;
 static SemaphoreHandle_t httpd_ui_sync = nullptr;
-static const char* httpd_page_header =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/html\r\n"
-    "Transfer-Encoding: chunked\r\n\r\n";
-static const char* httpd_api_header =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: application/json\r\n"
-    "Transfer-Encoding: chunked\r\n\r\n";
 struct httpd_async_resp_arg {
     httpd_handle_t hd;
     int fd;
@@ -447,13 +439,15 @@ static void httpd_send_expr(const char* expr, void* arg) {
     httpd_send_chunked(resp_arg, expr, strlen(expr));
 }
 static void httpd_page_async_handler(void* arg) {
-    static const size_t header_len = strlen(httpd_page_header);
-    char input_buffer[256];
+    static const char* header =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Transfer-Encoding: chunked\r\n\r\n";
+    static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, httpd_page_header, header_len, 0);
+    httpd_socket_send(hd, fd, header, header_len, 0);
     httpd_send_block(
         "E2\r\n<!DOCTYPE html>\r\n<html>\r\n    <head>\r\n        <meta "
         "name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" "
@@ -482,11 +476,15 @@ static void httpd_page_async_handler(void* arg) {
     free(arg);
 }
 static void httpd_api_async_handler(void* arg) {
-    static const size_t header_len = strlen(httpd_api_header);
+    static const char* header =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n"
+        "Transfer-Encoding: chunked\r\n\r\n";
+    static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, httpd_api_header, header_len, 0);
+    httpd_socket_send(hd, fd, header, header_len, 0);
     httpd_send_block("B\r\n{\"status\":[\r\n", 16, resp_arg);
 
     for (size_t i = 0; i < alarm_count; ++i) {
