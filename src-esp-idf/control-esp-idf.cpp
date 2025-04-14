@@ -267,7 +267,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(wifi_event_group, wifi_connected_bit);
     }
 }
-static bool wifi_load(FILE* file, char* ssid, char* pass) {
+static bool wifi_load(const char* path, char* ssid, char* pass) {
+    FILE* file = fopen(path,"r");
     if (file != nullptr) {
         // parse the file
         fgets(ssid, 64, file);
@@ -276,6 +277,7 @@ static bool wifi_load(FILE* file, char* ssid, char* pass) {
         sv = strchr(ssid, '\r');
         if (sv != nullptr) *sv = '\0';
         fgets(pass, 128, file);
+        fclose(file);
         sv = strchr(pass, '\n');
         if (sv != nullptr) *sv = '\0';
         sv = strchr(pass, '\r');
@@ -815,19 +817,11 @@ extern "C" void app_main() {
     wifi_pass[0] = 0;
     if (sd_init()) {
         puts("SD card found, looking for wifi.txt creds");
-        FILE* file = fopen("/sdcard/wifi.txt", "r");
-        loaded = wifi_load(file,wifi_ssid,wifi_pass);
-        if(file!=nullptr) {
-            fclose(file);
-        }
+        loaded = wifi_load("/sdcard/wifi.txt",wifi_ssid,wifi_pass);
     }
     if (!loaded) {
         puts("Looking for wifi.txt creds on internal flash");
-        FILE* file = fopen("/spiffs/wifi.txt", "r");
-        loaded = wifi_load(file, wifi_ssid, wifi_pass);
-        if (file != nullptr) {
-            fclose(file);
-        }
+        loaded = wifi_load("/spiffs/wifi.txt", wifi_ssid, wifi_pass);
     }
     if (loaded) {
         printf("Initializing WiFi connection to %s\n", wifi_ssid);
@@ -844,6 +838,7 @@ extern "C" void app_main() {
         if (pressed) {
             if (switch_index > 0) {
                 --switch_index;
+                // we're already locking from just outside lcd.update()
                 update_switches(false);
             }
         }
@@ -862,6 +857,7 @@ extern "C" void app_main() {
         if (pressed) {
             if (switch_index < alarm_count - switches_count) {
                 ++switch_index;
+                // we're already locking from just outside lcd.update()
                 update_switches(false);
             }
         }
