@@ -5,13 +5,12 @@
         <title>Alarm Control Panel</title>
     </head>
     <body>
-        <form method="get" action="."><%
-           for(size_t i = 0;i<alarm_count;++i) {
+        <form method="get" action="."><%for(size_t i = 0;i<alarm_count;++i) {
             %>
             <label><%=i+1%></label><input name="a" type="checkbox" value="<%=i%>" <%=alarm_values[i]?"checked":""%>/><br /><%
-           }%>
-            <input type="submit" name="set" value="write"/>
-            <input type="submit" name="refresh" value="read"/>
+}%>
+            <input type="submit" name="set" value="set" />
+            <input type="submit" name="refresh" value="get" />
         </form>
     </body>
 </html>
