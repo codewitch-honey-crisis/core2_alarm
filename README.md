@@ -48,6 +48,8 @@ This will set all the fire alarms to off except #1 (zero based index of 0) and #
 
 ### Note: The ESP-IDF version is slightly better, being a bit more elegant in terms of handling lots of alarms, plus being generally more efficient.
 
+The HTTP responses in the ESP-IDF code were generated using ClASP: https://github.com/codewitch-honey-crisis/clasp
+
 You can regenerate the clasp files from the project directory with the following commands
 
 ```
