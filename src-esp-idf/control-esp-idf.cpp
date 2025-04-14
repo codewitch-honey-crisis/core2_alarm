@@ -445,9 +445,7 @@ static void httpd_page_async_handler(void* arg) {
         "Transfer-Encoding: chunked\r\n\r\n";
     static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-    httpd_handle_t hd = resp_arg->hd;
-    int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, header, header_len, 0);
+    httpd_socket_send(resp_arg->hd, resp_arg->fd, header, header_len, 0);
     #include "httpd_page.h"
     free(arg);
 }
@@ -458,9 +456,7 @@ static void httpd_api_async_handler(void* arg) {
         "Transfer-Encoding: chunked\r\n\r\n";
     static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-    httpd_handle_t hd = resp_arg->hd;
-    int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, header, header_len, 0);
+    httpd_socket_send(resp_arg->hd, resp_arg->fd, header, header_len, 0);
     #include "httpd_api.h"
     free(arg);
 }
