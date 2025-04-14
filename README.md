@@ -47,3 +47,10 @@ Where the IP is replaced with the local network IP of the Core2
 This will set all the fire alarms to off except #1 (zero based index of 0) and #3 (index 2)
 
 ### Note: The ESP-IDF version is slightly better, being a bit more elegant in terms of handling lots of alarms, plus being generally more efficient.
+
+You can regenerate the clasp files from the project directory with the following commands
+
+```
+.\build_tools\clasp clasp/page.clasp include/httpd_page.h /expr httpd_send_expr /state resp_arg /block httpd_send_block
+.\build_tools\clasp clasp/api.clasp include/httpd_api.h /expr httpd_send_expr /state resp_arg /block httpd_send_block
+```
