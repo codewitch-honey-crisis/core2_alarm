@@ -42,8 +42,8 @@
 #include <uix.hpp>            // user interface library
 
 #include "driver/gpio.h"
-#include "driver/uart.h"
 #include "driver/spi_master.h"
+#include "driver/uart.h"
 #include "esp_http_server.h"
 #include "esp_lcd_panel_ili9342.h"
 #include "esp_lcd_panel_io.h"
@@ -66,8 +66,8 @@
 
 // namespace imports
 using namespace esp_idf;  // devices
-using namespace gfx;  // graphics
-using namespace uix;  // user interface
+using namespace gfx;      // graphics
+using namespace uix;      // user interface
 
 using color_t = color<rgb_pixel<16>>;     // screen color
 using color32_t = color<rgba_pixel<32>>;  // UIX color
@@ -190,15 +190,15 @@ class arrow_box : public control<ControlSurfaceType> {
         }
     }
 };
-static void update_switches(bool lock=true);
+static void update_switches(bool lock = true);
 static void serial_send_alarm(size_t i);
 
 static bool alarm_values[alarm_count];
 
 static void alarm_enable(size_t alarm, bool on) {
-    if(alarm<0||alarm>=alarm_count) return;
-    if(alarm_values[alarm]!=on) {
-        alarm_values[alarm]=on;
+    if (alarm < 0 || alarm >= alarm_count) return;
+    if (alarm_values[alarm] != on) {
+        alarm_values[alarm] = on;
         serial_send_alarm(alarm);
     }
 }
@@ -214,7 +214,7 @@ static esp_ip4_addr_t wifi_ip;
 
 static void serial_init() {
     uart_config_t uart_config;
-    memset(&uart_config,0,sizeof(uart_config));
+    memset(&uart_config, 0, sizeof(uart_config));
     uart_config.baud_rate = serial_baud_rate;
     uart_config.data_bits = UART_DATA_8_BITS;
     uart_config.parity = UART_PARITY_DISABLE;
@@ -222,7 +222,8 @@ static void serial_init() {
     uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 256, 0, 20, nullptr, 0));
     uart_param_config(UART_NUM_1, &uart_config);
-    uart_set_pin(UART_NUM_1, control_serial_pins.tx, control_serial_pins.rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(UART_NUM_1, control_serial_pins.tx, control_serial_pins.rx,
+                 UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
 struct serial_event {
     COMMAND_ID cmd;
@@ -230,7 +231,8 @@ struct serial_event {
 };
 static bool serial_get_event(serial_event* out_event) {
     uint8_t payload[2];
-    if(out_event && sizeof(payload)==uart_read_bytes(UART_NUM_1,&payload,sizeof(payload),0)) {
+    if (out_event && sizeof(payload) == uart_read_bytes(UART_NUM_1, &payload,
+                                                        sizeof(payload), 0)) {
         out_event->cmd = (COMMAND_ID)payload[0];
         out_event->arg = payload[1];
         return true;
@@ -238,16 +240,17 @@ static bool serial_get_event(serial_event* out_event) {
     return false;
 }
 static void serial_send_alarm(size_t i) {
-    if(i>=alarm_count) return;
-    printf("%s alarm #%d\n",alarm_values[i]?"setting":"clearing",(int)i+1);
+    if (i >= alarm_count) return;
+    printf("%s alarm #%d\n", alarm_values[i] ? "setting" : "clearing",
+           (int)i + 1);
     uint8_t payload[2];
     payload[0] = alarm_values[i] ? SET_ALARM : CLEAR_ALARM;
     payload[1] = i;
-    uart_write_bytes(UART_NUM_1,payload,sizeof(payload));
+    uart_write_bytes(UART_NUM_1, payload, sizeof(payload));
 }
 static size_t wifi_retry_count = 0;
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                        int32_t event_id, void* event_data) {
+                               int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT &&
@@ -268,7 +271,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 static bool wifi_load(const char* path, char* ssid, char* pass) {
-    FILE* file = fopen(path,"r");
+    FILE* file = fopen(path, "r");
     if (file != nullptr) {
         // parse the file
         fgets(ssid, 64, file);
@@ -334,135 +337,173 @@ static WIFI_STATUS wifi_status() {
 }
 static httpd_handle_t httpd_handle = nullptr;
 static SemaphoreHandle_t httpd_ui_sync = nullptr;
-static const char* httpd_page_header =      "HTTP/1.1 200 OK\r\n"                   \
-                           "Content-Type: text/html\r\n"           \
-                           "Transfer-Encoding: chunked\r\n\r\n";
-static const char* httpd_page_prologue = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" /><title>Alarm Control Panel</title></head><body><form method=\"get\" action=\".\">";
-static const char*  httpd_page_input_format ="<label>%d</label><input name=\"a\" type=\"checkbox\" value=\"%d\" %s/><br />";
-static const char*  httpd_page_epilogue ="<input type=\"submit\" name=\"set\" value=\"write\"/><input type=\"submit\" name=\"refresh\" value=\"read\"/></form></body></html>";
-static const char*  httpd_api_header =     "HTTP/1.1 200 OK\r\n"                   \
-                           "Content-Type: application/json\r\n"           \
-                           "Transfer-Encoding: chunked\r\n\r\n";
-static const char*  httpd_api_prologue = "{\"status\":[";
-static const char* httpd_api_epilogue = "]}";
+static const char* httpd_page_header =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/html\r\n"
+    "Transfer-Encoding: chunked\r\n\r\n";
+static const char* httpd_api_header =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: application/json\r\n"
+    "Transfer-Encoding: chunked\r\n\r\n";
 struct httpd_async_resp_arg {
     httpd_handle_t hd;
     int fd;
 };
-static void httpd_send_chunked(httpd_async_resp_arg *resp_arg, const char* buffer, size_t buffer_len) {
+static void httpd_send_chunked(httpd_async_resp_arg* resp_arg,
+                               const char* buffer, size_t buffer_len) {
     char buf[64];
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    itoa(buffer_len,buf,16);
-    strcat(buf,"\r\n");
-    httpd_socket_send(hd,fd,buf,strlen(buf),0);
-    if(buffer && buffer_len) {
-        httpd_socket_send(hd,fd,buffer,buffer_len,0);
+    itoa(buffer_len, buf, 16);
+    strcat(buf, "\r\n");
+    httpd_socket_send(hd, fd, buf, strlen(buf), 0);
+    if (buffer && buffer_len) {
+        httpd_socket_send(hd, fd, buffer, buffer_len, 0);
     }
-    httpd_socket_send(hd,fd,"\r\n",2,0);
+    httpd_socket_send(hd, fd, "\r\n", 2, 0);
 }
-static const char* httpd_crack_query(const char* url_part,char* name, char* value) {
-    if(url_part==nullptr || !*url_part) return nullptr;
+static const char* httpd_crack_query(const char* url_part, char* name,
+                                     char* value) {
+    if (url_part == nullptr || !*url_part) return nullptr;
     const char start = *url_part;
-    if(start=='&' || start=='?') {
+    if (start == '&' || start == '?') {
         ++url_part;
     }
     size_t i = 0;
     char* name_cur = name;
-    while(*url_part && *url_part!='=') {
-        if(i<64) {
-            *name_cur++=*url_part;
+    while (*url_part && *url_part != '=') {
+        if (i < 64) {
+            *name_cur++ = *url_part;
         }
         ++url_part;
         ++i;
     }
     *name_cur = '\0';
-    if(!*url_part) {
-        *value='\0';
+    if (!*url_part) {
+        *value = '\0';
         return url_part;
     }
     ++url_part;
-    i=0;
+    i = 0;
     char* value_cur = value;
-    while(*url_part && *url_part!='&' && i<64) {
-        *value_cur++=*url_part++;
+    while (*url_part && *url_part != '&' && i < 64) {
+        *value_cur++ = *url_part++;
         ++i;
     }
     *value_cur = '\0';
     return url_part;
 }
 static void httpd_parse_url_and_apply_alarms(const char* url) {
-    const char* query = strchr(url,'?');
+    const char* query = strchr(url, '?');
     bool has_set = false;
     char name[64];
     char value[64];
     bool req_values[alarm_count];
-    if(query!=nullptr) {
-        memset(req_values,0,sizeof(req_values));
-        while(1) {
-            query=httpd_crack_query(query,name,value);
-            if(!query){
+    if (query != nullptr) {
+        memset(req_values, 0, sizeof(req_values));
+        while (1) {
+            query = httpd_crack_query(query, name, value);
+            if (!query) {
                 break;
-            } 
-            if(!strcmp("set",name)) {
+            }
+            if (!strcmp("set", name)) {
                 has_set = true;
-            } else if(!strcmp("a",name)) {
+            } else if (!strcmp("a", name)) {
                 char* endsz;
-                long l = strtol(value,&endsz,10);
-                if(l>=0&&l<alarm_count) {
-                    req_values[l]=true;
+                long l = strtol(value, &endsz, 10);
+                if (l >= 0 && l < alarm_count) {
+                    req_values[l] = true;
                 }
             }
         }
     }
-    if(has_set) {
-        for(size_t i = 0;i<alarm_count;++i) {
-            alarm_enable(i,req_values[i]);
+    if (has_set) {
+        for (size_t i = 0; i < alarm_count; ++i) {
+            alarm_enable(i, req_values[i]);
         }
         update_switches();
     }
 }
+static void httpd_send_block(const char* data, size_t len, void* arg) {
+    if (!data || !*data || !len) {
+        return;
+    }
+    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+    httpd_handle_t hd = resp_arg->hd;
+    int fd = resp_arg->fd;
+    httpd_socket_send(hd, fd, data, len, 0);
+}
+static void httpd_send_expr(int expr, void* arg) {
+    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+    char buf[64];
+    itoa(expr, buf, 10);
+    httpd_send_chunked(resp_arg, buf, strlen(buf));
+}
+static void httpd_send_expr(const char* expr, void* arg) {
+    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+    if (!expr || !*expr) {
+        return;
+    }
+    httpd_send_chunked(resp_arg, expr, strlen(expr));
+}
 static void httpd_page_async_handler(void* arg) {
     static const size_t header_len = strlen(httpd_page_header);
-    static const size_t prologue_len = strlen(httpd_page_prologue);
-    static const size_t epilogue_len = strlen(httpd_page_epilogue);
     char input_buffer[256];
-    httpd_async_resp_arg *resp_arg = (httpd_async_resp_arg *)arg;
-    
+    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
     httpd_socket_send(hd, fd, httpd_page_header, header_len, 0);
-    httpd_send_chunked(resp_arg,httpd_page_prologue,prologue_len);
-    for(size_t i = 0; i<alarm_count;++i) {
-        const bool checked = alarm_values[i];
-        snprintf(input_buffer,sizeof(input_buffer),httpd_page_input_format,i + 1, i, checked ? "checked" : "");
-        httpd_send_chunked(resp_arg,input_buffer,strlen(input_buffer));
+    httpd_send_block(
+        "E2\r\n<!DOCTYPE html>\r\n<html>\r\n    <head>\r\n        <meta "
+        "name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" "
+        "/>\r\n        <title>Alarm Control Panel</title>\r\n    </head>\r\n   "
+        " <body>\r\n        <form method=\"get\" action=\".\">\r\n",
+        232, resp_arg);
+
+    for (size_t i = 0; i < alarm_count; ++i) {
+        httpd_send_block("7\r\n<label>\r\n", 12, resp_arg);
+        httpd_send_expr(i + 1, resp_arg);
+        httpd_send_block(
+            "2F\r\n</label><input name=\"a\" type=\"checkbox\" value=\"\r\n",
+            53, resp_arg);
+        httpd_send_expr(i, resp_arg);
+        httpd_send_block("2\r\n\" \r\n", 7, resp_arg);
+        httpd_send_expr(alarm_values[i] ? "checked" : "", resp_arg);
+        httpd_send_block("8\r\n/><br />\r\n", 13, resp_arg);
     }
-    httpd_send_chunked(resp_arg,httpd_page_epilogue,epilogue_len);
-    httpd_send_chunked(resp_arg,NULL,0);
+    httpd_send_block(
+        "A6\r\n\r\n            <input type=\"submit\" name=\"set\" "
+        "value=\"write\"/>\r\n            <input type=\"submit\" "
+        "name=\"refresh\" value=\"read\"/>\r\n        </form>\r\n    "
+        "</body>\r\n</html>\r\n\r\n",
+        172, resp_arg);
+    httpd_send_block("0\r\n\r\n", 5, resp_arg);
     free(arg);
 }
 static void httpd_api_async_handler(void* arg) {
     static const size_t header_len = strlen(httpd_api_header);
-    static const size_t prologue_len = strlen(httpd_api_prologue);
-    static const size_t epilogue_len = strlen(httpd_api_epilogue);
-    httpd_async_resp_arg *resp_arg = (httpd_async_resp_arg *)arg;
+    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
     httpd_socket_send(hd, fd, httpd_api_header, header_len, 0);
-    httpd_send_chunked(resp_arg,httpd_api_prologue,prologue_len);
-    for(size_t i = 0; i<alarm_count;++i) {
-        const bool checked = alarm_values[i];
-        const char* val = (i==0)?(checked?"true":"false"):(checked?",true":",false");
-        httpd_send_chunked(resp_arg,val,strlen(val));
+    httpd_send_block("B\r\n{\"status\":[\r\n", 16, resp_arg);
+
+    for (size_t i = 0; i < alarm_count; ++i) {
+        if (i != 0) {
+            httpd_send_block("1\r\n,\r\n", 6, resp_arg);
+        }
+        httpd_send_expr(alarm_values[i] ? "true" : "false", resp_arg);
     }
-    httpd_send_chunked(resp_arg,httpd_api_epilogue,epilogue_len);
-    httpd_send_chunked(resp_arg,NULL,0);
+    httpd_send_block("2\r\n]}\r\n", 7, resp_arg);
+    httpd_send_block("0\r\n\r\n", 5, resp_arg);
+
     free(arg);
 }
 static esp_err_t httpd_request_handler(httpd_req_t* req) {
-    httpd_async_resp_arg *resp_arg = (httpd_async_resp_arg *)malloc(sizeof(httpd_async_resp_arg));
-    if(resp_arg==nullptr) {
+    httpd_async_resp_arg* resp_arg =
+        (httpd_async_resp_arg*)malloc(sizeof(httpd_async_resp_arg));
+    if (resp_arg == nullptr) {
         return ESP_ERR_NO_MEM;
     }
     httpd_parse_url_and_apply_alarms(req->uri);
@@ -471,35 +512,33 @@ static esp_err_t httpd_request_handler(httpd_req_t* req) {
     if (resp_arg->fd < 0) {
         return ESP_FAIL;
     }
-    httpd_queue_work(req->handle,(httpd_work_fn_t) req->user_ctx, resp_arg);
+    httpd_queue_work(req->handle, (httpd_work_fn_t)req->user_ctx, resp_arg);
     return ESP_OK;
 }
 static void httpd_init() {
     httpd_ui_sync = xSemaphoreCreateMutex();
-    if(httpd_ui_sync==nullptr) {
+    if (httpd_ui_sync == nullptr) {
         ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
     }
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     /* Modify this setting to match the number of test URI handlers */
-    config.max_uri_handlers  = 5;
+    config.max_uri_handlers = 5;
     config.server_port = 80;
     config.max_open_sockets = (CONFIG_LWIP_MAX_SOCKETS - 3);
     ESP_ERROR_CHECK(httpd_start(&httpd_handle, &config));
-    httpd_uri_t handler = { .uri      = "/",
-        .method   = HTTP_GET,
-        .handler  = httpd_request_handler,
-        .user_ctx = (void*)httpd_page_async_handler
-      };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle,&handler));
-    handler = { .uri      = "/api",
-        .method   = HTTP_GET,
-        .handler  = httpd_request_handler,
-        .user_ctx = (void*)httpd_api_async_handler
-      };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle,&handler));
+    httpd_uri_t handler = {.uri = "/",
+                           .method = HTTP_GET,
+                           .handler = httpd_request_handler,
+                           .user_ctx = (void*)httpd_page_async_handler};
+    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
+    handler = {.uri = "/api",
+               .method = HTTP_GET,
+               .handler = httpd_request_handler,
+               .user_ctx = (void*)httpd_api_async_handler};
+    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
 }
 static void httpd_end() {
-    if(httpd_handle==nullptr) {
+    if (httpd_handle == nullptr) {
         return;
     }
     ESP_ERROR_CHECK(httpd_stop(httpd_handle));
@@ -720,7 +759,8 @@ static bool sd_init() {
 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = SD_PORT;
-    // // This initializes the slot without card detect (CD) and write protect (WP)
+    // // This initializes the slot without card detect (CD) and write
+    // protect (WP)
     // // signals.
     sdspi_device_config_t slot_config;
     memset(&slot_config, 0, sizeof(slot_config));
@@ -771,8 +811,8 @@ static qr_t qr_link;
 static button_t qr_return;
 
 static void update_switches(bool lock) {
-    if(lock && httpd_ui_sync!=nullptr) {
-        xSemaphoreTake(httpd_ui_sync,portMAX_DELAY);
+    if (lock && httpd_ui_sync != nullptr) {
+        xSemaphoreTake(httpd_ui_sync, portMAX_DELAY);
     }
     switches_updating = true;
     for (size_t i = 0; i < switches_count; ++i) {
@@ -783,8 +823,8 @@ static void update_switches(bool lock) {
     left_button.visible(switch_index != 0);
     right_button.visible(switch_index < alarm_count - switches_count);
     switches_updating = false;
-    if(lock && httpd_ui_sync!=nullptr) {
-        xSemaphoreGive  (httpd_ui_sync);
+    if (lock && httpd_ui_sync != nullptr) {
+        xSemaphoreGive(httpd_ui_sync);
     }
 }
 
@@ -811,13 +851,13 @@ extern "C" void app_main() {
     memset(alarm_values, 0, sizeof(alarm_values));
     serial_init();
     bool loaded = false;
-    
+
     wifi_ssid[0] = 0;
-    
+
     wifi_pass[0] = 0;
     if (sd_init()) {
         puts("SD card found, looking for wifi.txt creds");
-        loaded = wifi_load("/sdcard/wifi.txt",wifi_ssid,wifi_pass);
+        loaded = wifi_load("/sdcard/wifi.txt", wifi_ssid, wifi_pass);
     }
     if (!loaded) {
         puts("Looking for wifi.txt creds on internal flash");
@@ -878,7 +918,7 @@ extern "C" void app_main() {
     reset_all.on_pressed_changed_callback([](bool pressed, void* state) {
         if (pressed) {
             for (size_t i = 0; i < alarm_count; ++i) {
-                alarm_enable(i,false);
+                alarm_enable(i, false);
             }
             switches_updating = true;
             for (size_t i = 0; i < switches_count; ++i) {
@@ -941,7 +981,7 @@ extern "C" void app_main() {
                 if (!switches_updating) {
                     switch_t* psw = (switch_t*)state;
                     const size_t i = (size_t)(psw - switches) + switch_index;
-                    alarm_enable(i,value);
+                    alarm_enable(i, value);
                 }
             },
             &s);
@@ -963,10 +1003,10 @@ extern "C" void app_main() {
     qr_screen.dimensions(main_screen.dimensions());
     // initialize the controls
     sr = srect16(0, 0, qr_screen.dimensions().width / 2,
-                    qr_screen.dimensions().width / 8);
+                 qr_screen.dimensions().width / 8);
     qr_link.bounds(srect16(0, 0, qr_screen.dimensions().width / 2,
-                            qr_screen.dimensions().width / 2)
-                        .center_horizontal(qr_screen.bounds()));
+                           qr_screen.dimensions().width / 2)
+                       .center_horizontal(qr_screen.bounds()));
     qr_link.text("about:blank");
     qr_screen.register_control(qr_link);
     qr_return.bounds(
@@ -989,23 +1029,23 @@ extern "C" void app_main() {
     lcd.active_screen(main_screen);
     TaskHandle_t loop_handle;
     xTaskCreate(loop_task, "loop_task", 4096, nullptr, 10, &loop_handle);
-    printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
+    printf("Free SRAM: %0.2fKB\n", esp_get_free_internal_heap_size() / 1024.f);
 }
 static void loop() {
     // update the display and touch device
-    if(httpd_ui_sync!=nullptr) {
-        xSemaphoreTake(httpd_ui_sync,portMAX_DELAY);
+    if (httpd_ui_sync != nullptr) {
+        xSemaphoreTake(httpd_ui_sync, portMAX_DELAY);
     }
     lcd.update();
-    if(httpd_ui_sync!=nullptr) {
-        xSemaphoreGive  (httpd_ui_sync);
+    if (httpd_ui_sync != nullptr) {
+        xSemaphoreGive(httpd_ui_sync);
     }
     serial_event evt;
-    if(serial_get_event(&evt)) {
-        switch(evt.cmd) {
+    if (serial_get_event(&evt)) {
+        switch (evt.cmd) {
             case ALARM_THROWN:
-                alarm_enable(evt.arg,true);
-            break;
+                alarm_enable(evt.arg, true);
+                break;
             default:
                 puts("Unknown event received");
                 break;
@@ -1027,7 +1067,8 @@ static void loop() {
             qr_link.text(qr_text);
             // now show the link
             web_link.visible(true);
-            printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
+            printf("Free SRAM: %0.2fKB\n",
+                   esp_get_free_internal_heap_size() / 1024.f);
         }
     } else {
         if (wifi_status() == WIFI_CONNECT_FAILED) {
@@ -1042,8 +1083,10 @@ static void loop() {
             reset_all.bounds(
                 reset_all.bounds().center_horizontal(main_screen.bounds()));
             httpd_end();
+            wifi_retry_count = 0;
             esp_wifi_start();
-            printf("Free SRAM: %0.2fKB\n",esp_get_free_internal_heap_size()/1024.f);
+            printf("Free SRAM: %0.2fKB\n",
+                   esp_get_free_internal_heap_size() / 1024.f);
         }
     }
 }

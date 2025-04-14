@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Alarm Control Panel</title>
+    </head>
+    <body>
+        <form method="get" action="."><%
+           for(size_t i = 0;i<alarm_count;++i) {
+            %><label><%=i+1%></label><input name="a" type="checkbox" value="<%=i%>" <%=alarm_values[i]?"checked":""%>/><br /><%
+           }%>
+            <input type="submit" name="set" value="write"/>
+            <input type="submit" name="refresh" value="read"/>
+        </form>
+    </body>
+</html>
