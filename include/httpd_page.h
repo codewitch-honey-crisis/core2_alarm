@@ -2,7 +2,7 @@
 
            for(size_t i = 0;i<alarm_count;++i) {
             
-httpd_send_block("7\r\n<label>\r\n", 12, resp_arg);
+httpd_send_block("15\r\n\r\n            <label>\r\n", 27, resp_arg);
 httpd_send_expr(i+1, resp_arg);
 httpd_send_block("2F\r\n</label><input name=\"a\" type=\"checkbox\" value=\"\r\n", 53, resp_arg);
 httpd_send_expr(i, resp_arg);
