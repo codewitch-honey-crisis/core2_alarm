@@ -424,9 +424,7 @@ static void httpd_send_block(const char* data, size_t len, void* arg) {
         return;
     }
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-    httpd_handle_t hd = resp_arg->hd;
-    int fd = resp_arg->fd;
-    httpd_socket_send(hd, fd, data, len, 0);
+    httpd_socket_send(resp_arg->hd, resp_arg->fd, data, len, 0);
 }
 static void httpd_send_expr(int expr, void* arg) {
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
