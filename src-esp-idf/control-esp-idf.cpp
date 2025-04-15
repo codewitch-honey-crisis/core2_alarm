@@ -485,7 +485,7 @@ static void httpd_init() {
     }
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     /* Modify this setting to match the number of test URI handlers */
-    config.max_uri_handlers = 5;
+    config.max_uri_handlers = 2;
     config.server_port = 80;
     config.max_open_sockets = (CONFIG_LWIP_MAX_SOCKETS - 3);
     ESP_ERROR_CHECK(httpd_start(&httpd_handle, &config));
