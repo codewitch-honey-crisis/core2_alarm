@@ -440,24 +440,12 @@ static void httpd_send_expr(const char* expr, void* arg) {
     httpd_send_chunked(resp_arg, expr, strlen(expr));
 }
 static void httpd_page_async_handler(void* arg) {
-    static const char* header =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Transfer-Encoding: chunked\r\n\r\n";
-    static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-    httpd_socket_send(resp_arg->hd, resp_arg->fd, header, header_len, 0);
     #include "httpd_page.h"
     free(arg);
 }
 static void httpd_api_async_handler(void* arg) {
-    static const char* header =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: application/json\r\n"
-        "Transfer-Encoding: chunked\r\n\r\n";
-    static const size_t header_len = strlen(header);
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
-    httpd_socket_send(resp_arg->hd, resp_arg->fd, header, header_len, 0);
     #include "httpd_api.h"
     free(arg);
 }

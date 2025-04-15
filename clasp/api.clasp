@@ -1,5 +1,6 @@
-{"status":[<%
+<%@status code="200" text="OK"%>
+<%@header name="Content-Type" value="application/json"%>
+<%@header name="Transfer-Encoding" value="chunked"%>{"status":[<%
 for(size_t i = 0;i<alarm_count;++i) {
-    if(i!=0) {
-        %>,<%
-    }%><%=alarm_values[i]?"true":"false"%><%}%>]}
+    bool b=alarm_values[i];
+    %><%=i==0?(b?"true":"false"):(b?",true":",false")%><%}%>]}
