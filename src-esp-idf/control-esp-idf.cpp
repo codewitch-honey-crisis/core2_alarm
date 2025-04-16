@@ -439,17 +439,15 @@ static void httpd_send_expr(const char* expr, void* arg) {
     }
     httpd_send_chunked(resp_arg, expr, strlen(expr));
 }
-static void httpd_page_async_handler(void* arg) {
-    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+static void httpd_page_async_handler(void* resp_arg) {
     // generated from clasp/page.clasp:
     #include "httpd_page.h"
-    free(arg);
+    free(resp_arg);
 }
-static void httpd_api_async_handler(void* arg) {
-    httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+static void httpd_api_async_handler(void* resp_arg) {
     // generated from clasp/api.clasp:
     #include "httpd_api.h"
-    free(arg);
+    free(resp_arg);
 }
 static esp_err_t httpd_request_handler(httpd_req_t* req) {
     httpd_async_resp_arg* resp_arg =
