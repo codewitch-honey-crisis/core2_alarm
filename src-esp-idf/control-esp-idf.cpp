@@ -441,11 +441,13 @@ static void httpd_send_expr(const char* expr, void* arg) {
 }
 static void httpd_page_async_handler(void* arg) {
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+    // generated from clasp/page.clasp:
     #include "httpd_page.h"
     free(arg);
 }
 static void httpd_api_async_handler(void* arg) {
     httpd_async_resp_arg* resp_arg = (httpd_async_resp_arg*)arg;
+    // generated from clasp/api.clasp:
     #include "httpd_api.h"
     free(arg);
 }

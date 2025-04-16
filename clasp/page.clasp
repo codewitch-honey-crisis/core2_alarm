@@ -1,15 +1,15 @@
 ﻿<%@status code="200" text="OK"%>
-<%@header name="Content-Type" value="text/html"%>
-<%@header name="Transfer-Encoding" value="chunked"%><!DOCTYPE html>
+<%@header name="Content-Type" value="text/html"%><!DOCTYPE html>
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Alarm Control Panel</title>
     </head>
     <body>
+        <h1>Alarm Control Panel</h1>
         <form method="get" action="."><%for(size_t i = 0;i<alarm_count;++i) {
             %>
-            <label><%=i+1%></label><input name="a" type="checkbox" value="<%=i%>" <%if(alarm_values[i]){%>checked<%}%> /><br /><%
+            <label><%=i+1%></label><input name="a" type="checkbox" value="<%=i%>" <%if(alarm_values[i]){%>checked <%}%>/><br /><%
 }%>
             <input type="submit" name="set" value="set" />
             <input type="submit" name="refresh" value="get" />
