@@ -64,6 +64,7 @@
 #include "assets/right_arrow.h"
 #include "config.h"
 
+
 // namespace imports
 using namespace esp_idf;  // devices
 using namespace gfx;      // graphics
@@ -203,6 +204,13 @@ static void alarm_enable(size_t alarm, bool on) {
         serial_send_alarm(alarm);
     }
 }
+
+static void httpd_send_block(const char* data, size_t len, void* arg);
+static void httpd_send_expr(int expr, void* arg);
+static void httpd_send_expr(const char* expr, void* arg);
+
+#define WWW_CONTENT_IMPLEMENTATION
+#include "www_content.h"
 
 static uix::display lcd;
 
@@ -349,14 +357,17 @@ static void httpd_send_chunked(httpd_async_resp_arg* resp_arg,
     char buf[64];
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
-    itoa(buffer_len, buf, 16);
-    strcat(buf, "\r\n");
-    httpd_socket_send(hd, fd, buf, strlen(buf), 0);
     if (buffer && buffer_len) {
+        itoa(buffer_len, buf, 16);
+        strcat(buf, "\r\n");
+        httpd_socket_send(hd, fd, buf, strlen(buf), 0);
         httpd_socket_send(hd, fd, buffer, buffer_len, 0);
+        httpd_socket_send(hd, fd, "\r\n", 2, 0);
+        return;
     }
-    httpd_socket_send(hd, fd, "\r\n", 2, 0);
+    httpd_socket_send(hd, fd, "0\r\n\r\n", 5, 0);
 }
+
 static const char* httpd_crack_query(const char* url_part, char* name,
                                      char* value) {
     if (url_part == nullptr || !*url_part) return nullptr;
@@ -439,21 +450,7 @@ static void httpd_send_expr(const char* expr, void* arg) {
     }
     httpd_send_chunked(resp_arg, expr, strlen(expr));
 }
-static void httpd_page_async_handler(void* resp_arg) {
-    // generated from web/page.clasp:
-    #include "httpd_page.h"
-    free(resp_arg);
-}
-static void httpd_api_async_handler(void* resp_arg) {
-    // generated from web/api.clasp:
-    #include "httpd_api.h"
-    free(resp_arg);
-}
-static void httpd_jpg_async_handler(void* resp_arg) {
-    // generated from web/404.jpg:
-    #include "httpd_jpg.h"
-    free(resp_arg);
-}
+
 static esp_err_t httpd_request_handler(httpd_req_t* req) {
     httpd_async_resp_arg* resp_arg =
         (httpd_async_resp_arg*)malloc(sizeof(httpd_async_resp_arg));
@@ -475,25 +472,20 @@ static void httpd_init() {
         ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
     }
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 3;
+    config.max_uri_handlers = HTTPD_RESPONSE_HANDLER_COUNT;
     config.server_port = 80;
     config.max_open_sockets = (CONFIG_LWIP_MAX_SOCKETS - 3);
     ESP_ERROR_CHECK(httpd_start(&httpd_handle, &config));
-    httpd_uri_t handler = {.uri = "/",
-                           .method = HTTP_GET,
-                           .handler = httpd_request_handler,
-                           .user_ctx = (void*)httpd_page_async_handler};
-    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
-    handler = {.uri = "/api",
-               .method = HTTP_GET,
-               .handler = httpd_request_handler,
-               .user_ctx = (void*)httpd_api_async_handler};
-    ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
-    handler = {.uri = "/404",
-        .method = HTTP_GET,
-        .handler = httpd_request_handler,
-        .user_ctx = (void*)httpd_jpg_async_handler};
-ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
+
+    for (size_t i = 0; i < HTTPD_RESPONSE_HANDLER_COUNT; ++i) {
+        printf("Registering %s\n", httpd_response_handlers[i].path);
+        httpd_uri_t handler = {
+            .uri = httpd_response_handlers[i].path_encoded,
+            .method = HTTP_GET,
+            .handler = httpd_request_handler,
+            .user_ctx = (void*)httpd_response_handlers[i].handler};
+        ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
+    }
 }
 static void httpd_end() {
     if (httpd_handle == nullptr) {
