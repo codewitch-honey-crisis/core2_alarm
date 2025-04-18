@@ -1,0 +1,18 @@
+<%@status code="200" text="OK"%>
+<%@header name="Content-Type" value="application/json"%>{"status":[<%
+for(size_t i = 0;i<alarm_count;++i) {
+    bool b=alarm_values[i];
+    if(i==0) {
+        if(b) {
+            %>true<%
+        } else {
+            %>false<%
+        }
+    } else {
+        if(b) {
+            %>,true<%
+        } else {
+            %>,false<%
+        }
+    }
+}%>]}

@@ -440,13 +440,18 @@ static void httpd_send_expr(const char* expr, void* arg) {
     httpd_send_chunked(resp_arg, expr, strlen(expr));
 }
 static void httpd_page_async_handler(void* resp_arg) {
-    // generated from clasp/page.clasp:
+    // generated from web/page.clasp:
     #include "httpd_page.h"
     free(resp_arg);
 }
 static void httpd_api_async_handler(void* resp_arg) {
-    // generated from clasp/api.clasp:
+    // generated from web/api.clasp:
     #include "httpd_api.h"
+    free(resp_arg);
+}
+static void httpd_jpg_async_handler(void* resp_arg) {
+    // generated from web/404.jpg:
+    #include "httpd_jpg.h"
     free(resp_arg);
 }
 static esp_err_t httpd_request_handler(httpd_req_t* req) {
@@ -470,8 +475,7 @@ static void httpd_init() {
         ESP_ERROR_CHECK(ESP_ERR_NO_MEM);
     }
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    /* Modify this setting to match the number of test URI handlers */
-    config.max_uri_handlers = 2;
+    config.max_uri_handlers = 3;
     config.server_port = 80;
     config.max_open_sockets = (CONFIG_LWIP_MAX_SOCKETS - 3);
     ESP_ERROR_CHECK(httpd_start(&httpd_handle, &config));
@@ -485,6 +489,11 @@ static void httpd_init() {
                .handler = httpd_request_handler,
                .user_ctx = (void*)httpd_api_async_handler};
     ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
+    handler = {.uri = "/404",
+        .method = HTTP_GET,
+        .handler = httpd_request_handler,
+        .user_ctx = (void*)httpd_jpg_async_handler};
+ESP_ERROR_CHECK(httpd_register_uri_handler(httpd_handle, &handler));
 }
 static void httpd_end() {
     if (httpd_handle == nullptr) {
