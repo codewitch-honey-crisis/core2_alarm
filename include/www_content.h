@@ -3,9 +3,9 @@
 #ifndef WWW_CONTENT_H
 #define WWW_CONTENT_H
 
-#define HTTPD_RESPONSE_HANDLER_COUNT 4
+#define HTTPD_RESPONSE_HANDLER_COUNT 5
 typedef struct { const char* path; const char* path_encoded; void (* handler) (void* arg); } httpd_response_handler_t;
-extern httpd_response_handler_t httpd_response_handlers[4];
+extern httpd_response_handler_t httpd_response_handlers[5];
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,9 +23,10 @@ void httpd_www_content_api_index_clasp(void* resp_arg);
 
 #ifdef WWW_CONTENT_IMPLEMENTATION
 
-httpd_response_handler_t httpd_response_handlers[4] = {
+httpd_response_handler_t httpd_response_handlers[5] = {
     { "/", "/", httpd_www_content_index_clasp },
     { "/index.clasp", "/index.clasp", httpd_www_content_index_clasp },
+    { "/api/", "/api/", httpd_www_content_api_index_clasp },
     { "/api", "/api", httpd_www_content_api_index_clasp },
     { "/api/index.clasp", "/api/index.clasp", httpd_www_content_api_index_clasp }
 };
