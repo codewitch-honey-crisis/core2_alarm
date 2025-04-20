@@ -209,17 +209,10 @@ static void httpd_send_block(const char* data, size_t len, void* arg);
 static void httpd_send_expr(int expr, void* arg);
 static void httpd_send_expr(const char* expr, void* arg);
 
-#define WWW_CONTENT_IMPLEMENTATION
-#include "www_content.h"
+#define HTTPD_CONTENT_IMPLEMENTATION
+#include "httpd_content.h"
 
 static uix::display lcd;
-
-static constexpr const EventBits_t wifi_connected_bit = BIT0;
-static constexpr const EventBits_t wifi_fail_bit = BIT1;
-static EventGroupHandle_t wifi_event_group = NULL;
-static char wifi_ssid[65];
-static char wifi_pass[129];
-static esp_ip4_addr_t wifi_ip;
 
 static void serial_init() {
     uart_config_t uart_config;
@@ -258,6 +251,12 @@ static void serial_send_alarm(size_t i) {
     uart_write_bytes(UART_NUM_1, payload, sizeof(payload));
 }
 
+static constexpr const EventBits_t wifi_connected_bit = BIT0;
+static constexpr const EventBits_t wifi_fail_bit = BIT1;
+static EventGroupHandle_t wifi_event_group = NULL;
+static char wifi_ssid[65];
+static char wifi_pass[129];
+static esp_ip4_addr_t wifi_ip;
 static size_t wifi_retry_count = 0;
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data) {

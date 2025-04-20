@@ -53,5 +53,5 @@ The HTTP responses in the ESP-IDF code were generated using ClASP: https://githu
 You can regenerate the clasp files from the project directory with the following command:
 
 ```
-.\build_tools\clasptree web .\include\www_content.h /prefix httpd_ /epilogue .\include\www_epilogue.h /state resp_arg /block httpd_send_block /expr httpd_send_expr
+.\build_tools\clasptree web .\include\httpd_content.h /prefix httpd_ /epilogue .\include\httpd_epilogue.h /state resp_arg /block httpd_send_block /expr httpd_send_expr /handlers extended
 ```
