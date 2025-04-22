@@ -7,7 +7,7 @@ The application has two orchestrations, one for Arduino and one for the ESP-IDF.
 In terms of the ESP-IDF offering, it demonstrates
 
 1. HTTPD use
-2. A quick and dirty technique credentials to feed wifi credentials to the device via SD or SPIFFS
+2. A quick and dirty technique to feed wifi credentials to the device via SD or SPIFFS
 3. Managing a WiFi connection
 4. Generating and using dynamic dynamic content with ClASP-Tree 
 5. Driving a device over serial
