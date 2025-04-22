@@ -9,7 +9,7 @@ In terms of the ESP-IDF offering, it demonstrates
 1. HTTPD use
 2. A quick and dirty technique to feed wifi credentials to the device via SD or SPIFFS
 3. Managing a WiFi connection
-4. Generating and using dynamic dynamic content with ClASP-Tree 
+4. Generating and using dynamic web content with ClASP-Tree 
 5. Driving a device over serial
 6. Using htcw_gfx and htcw_uix with the ESP LCD Panel API to present a user interface.
 
