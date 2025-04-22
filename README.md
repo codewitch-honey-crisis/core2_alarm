@@ -2,7 +2,7 @@
 
 Core2 Alarm is a fire alarm system control panel and fire alarm driver for an ESP32. It was made to simulate a commercial fire alarm system, for a friend's kid.
 
-The application had two orchestrations, one for Arduino and one for the ESP-IDF. The ESP-IDF one is complete. The Arduino one is functionally complete but is provided for learning and not as fancy.
+The application has two orchestrations, one for Arduino and one for the ESP-IDF. The ESP-IDF one is complete. The Arduino one is functionally complete but is provided for learning and not as fancy.
 
 In terms of the ESP-IDF offering, it demonstrates
 
