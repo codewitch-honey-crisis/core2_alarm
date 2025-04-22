@@ -1,5 +1,18 @@
 # core2_alarm
 
+Core2 Alarm is a fire alarm system control panel and fire alarm driver for an ESP32. It was made to simulate a commercial fire alarm system, for a friend's kid.
+
+The application had two orchestrations, one for Arduino and one for the ESP-IDF. The ESP-IDF one is complete. The Arduino one is functionally complete but is provided for learning and not as fancy.
+
+In terms of the ESP-IDF offering, it demonstrates
+
+1. HTTPD use
+2. A quick and dirty technique credentials to feed wifi credentials to the device via SD or SPIFFS
+3. Managing a WiFi connection
+4. Generating and using dynamic dynamic content with ClASP-Tree 
+5. Driving a device over serial
+6. Using htcw_gfx and htcw_uix with the ESP LCD Panel API to present a user interface.
+
 ## Setup
 
 1. Set the appropriate COM ports in platformio.ini 
