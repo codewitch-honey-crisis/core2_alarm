@@ -141,7 +141,6 @@ class arrow_box : public control<ControlSurfaceType> {
                 const float yo = dim.height / 8;
                 rectf corrected = correct_aspect(sr, m_svg_size.aspect_ratio())
                                       .inflate(-xo, -yo);
-                ;
                 m_fit = matrix::create_fit_to(
                     m_svg_size,
                     corrected.offset((dim.width - corrected.width()) * .5f +
@@ -376,7 +375,7 @@ static const char* httpd_crack_query(const char* url_part, char* name,
     }
     size_t i = 0;
     char* name_cur = name;
-    while (*url_part && *url_part != '=') {
+    while (*url_part && *url_part != '=' && *url_part!='&') {
         if (i < 64) {
             *name_cur++ = *url_part;
         }
@@ -384,15 +383,18 @@ static const char* httpd_crack_query(const char* url_part, char* name,
         ++i;
     }
     *name_cur = '\0';
-    if (!*url_part) {
+    if (!*url_part || *url_part=='&') {
         *value = '\0';
         return url_part;
     }
     ++url_part;
     i = 0;
     char* value_cur = value;
-    while (*url_part && *url_part != '&' && i < 64) {
-        *value_cur++ = *url_part++;
+    while (*url_part && *url_part != '&') {
+        if(i<64) {
+            *value_cur++ = *url_part;    
+        }
+        ++url_part;
         ++i;
     }
     *value_cur = '\0';
@@ -1015,6 +1017,7 @@ static void loop() {
             static char qr_text[256];
             snprintf(qr_text, sizeof(qr_text), "http://" IPSTR,
                      IP2STR(&wifi_ip));
+            puts(qr_text);
             qr_link.text(qr_text);
             // now show the link
             web_link.visible(true);

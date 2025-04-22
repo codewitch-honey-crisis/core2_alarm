@@ -3,16 +3,26 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" type="text/css" href="./styles/default.css" />
         <title>Alarm Control Panel</title>
     </head>
     <body>
+        <script src="./scripts/default.js"></script>
         <h1>Alarm Control Panel</h1>
-        <form method="get" action="."><%for(size_t i = 0;i<alarm_count;++i) {
+        <form method="get" action="#"><%for(size_t i = 0;i<alarm_count;++i) {
             %>
-            <label><%=i+1%></label><input name="a" type="checkbox" value="<%=i%>" <%if(alarm_values[i]){%>checked <%}%>/><br /><%
+            <label><%=(i+1)%></label>
+            <label class="switch">
+                <input id="a<%=i%>" type="checkbox" onclick="refreshSwitches(true);" name="a" value="<%=i%>" <%if(alarm_values[i]){%>checked <%}%>/>
+                <span class="slider round"></span>
+            </label>
+            <%
 }%>
-            <input type="submit" name="set" value="set" />
-            <input type="submit" name="refresh" value="get" />
+            <br />
+            <button class="button" onclick="resetAll();" type="button">Reset All</button>
         </form>
+        <script>
+            document.addEventListener("DOMContentLoaded", refreshSwitches);
+        </script>
     </body>
 </html>
