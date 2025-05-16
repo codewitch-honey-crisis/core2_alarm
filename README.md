@@ -63,8 +63,8 @@ This will set all the fire alarms to off except #1 (zero based index of 0) and #
 
 The HTTP responses in the ESP-IDF code were generated using ClASP: https://github.com/codewitch-honey-crisis/clasp
 
-You can regenerate the clasp files from the project directory with the following command:
+You can regenerate the clasp files from the project directory with the following command, but it is done on build anyway
 
 ```
-.\build_tools\clasptree web .\include\httpd_content.h /prefix httpd_ /epilogue .\include\httpd_epilogue.h /state resp_arg /block httpd_send_block /expr httpd_send_expr /handlers extended
+clasptree web .\include\httpd_content.h /prefix httpd_ /epilogue .\include\httpd_epilogue.h /state resp_arg /block httpd_send_block /expr httpd_send_expr /handlers extended
 ```
