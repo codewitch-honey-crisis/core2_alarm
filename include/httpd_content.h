@@ -6,7 +6,7 @@
 
 #define HTTPD_RESPONSE_HANDLER_COUNT 7
 typedef struct { const char* path; const char* path_encoded; void (* handler) (void* arg); } httpd_response_handler_t;
-extern httpd_response_handler_t httpd_response_handlers[7];
+extern httpd_response_handler_t httpd_response_handlers[HTTPD_RESPONSE_HANDLER_COUNT];
 #ifdef __cplusplus
 extern "C" {
 #endif
